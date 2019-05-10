@@ -1,14 +1,14 @@
 util.AddNetworkString("AlertUsersOfRestart")
-local desiredRestartTime = 3                -- The hour to initiate a restart. Must be between 0-24
-local warningTime = 15                      -- How many minutes players have until restart...
-local restartAt                             -- Time at which the server will restart
-local fileName = "CFC_LastDailyRestart.txt"
+local desiredRestartTime = 3            -- The hour to initiate a restart. Must be between 0-24
+local warningTime = 15                  -- How many minutes players have until restart...
+local restartAt                         -- Time at which the server will restart
+local fileName = "CFC_LastDailyRestart"
 
 function restartServer()
     print("restarting server")
     
-    file.Write(fileName, os.time())
-    
+    file.Write(fileName..".txt", os.time())
+
     --local params = {}
     --local headers = {}
     --http.Post("localhost:2327/gmod/restart", params, function() end, function() end, headers)
