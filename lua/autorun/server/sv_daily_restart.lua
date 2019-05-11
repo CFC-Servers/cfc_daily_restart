@@ -2,7 +2,7 @@ util.AddNetworkString("AlertUsersOfRestart")
 
 local CFCDailyRestart = {}
 CFCDailyRestart.desiredRestartTime      = 3                         -- The hour to initiate a restart. Must be between 0-24
-CFCDailyRestart.warningTime             = 15                        -- How many minutes players have until restart...
+CFCDailyRestart.warningTime             = 45                        -- How many minutes players have until restart...
 CFCDailyRestart.restartAt               = nil                       -- Time at which the server will restart
 CFCDailyRestart.fileName                = "CFC_LastDailyRestart"
 CFCDailyRestart.countingDownToRestart   = false
@@ -20,7 +20,7 @@ end
 
 local function CFCDailyRestart:sendAlertToClients(message)
     for k, v in pairs(player.GetHumans()) do
-        v:ChatPrint(message)
+        v:ChatPrint("[CFC Daily Restart] "..message)
     end
 end
 
@@ -28,12 +28,7 @@ local function CFCDailyRestart:alertClientsOfServerRestart()
     print("Alerting clients of Restart")
     CFCDailyRestart.restartAt = os.time() + (warningTime * 60)
 
-    -- TODO: Alert how many seconds left
-    -- You'll want a logarithmic-ish function to alert at:
-    -- 15 min, 10min, 5min, 4min, 3min,2min,1min,30s,15s,10,9,8.. so on
-
-
-    CFCDailyRestart:sendAlertToClients()
+    CFCDailyRestart:sendAlertToClients("Restarting server in "..CFCDailyRestart.warningTime.." minutes.")
 
     net.Start("AlertUsersOfRestart")
         net.WriteFloat(restartAt)
@@ -43,20 +38,21 @@ end
 --TODO: Create a timer to 
 
 timer.Create("CFC_DailyRestart", 1, 0, function()
+    local theTime = os.time()
     local lastScheduledRestart = CFCDailyRestart.lastRestart
 
     if not lastScheduledRestart == nil then
         if os.difftime(os.time(), lastScheduledRestart) <= 3600 then return end
     end
 
-    local theTime = os.date("*t", os.time())
+    local theTimeFormatted = os.date("*t", theTime)
 
     -- TODO: Also check each second within 1 hour leading up to the restart time. If the server is empty during this time, issue the restart and ensure we don't try to restart again at the desired time
     --
     -- TODO (Future): Perhaps if there are fewer than N players on the server leading up to the restart time, allow them to vote to restart now and get it out of the way
 
     if not countingDownToRestart then
-        if (theTime.hour == desiredRestartTime) and (theTime.sec <= 30) then
+        if (theTimeFormatted.hour == desiredRestartTime) and (theTimeFormatted.sec <= 30) then
             local plyCount = table.Count(player.GetHumans())
 
             if plyCount == 0 then
@@ -74,5 +70,15 @@ timer.Create("CFC_DailyRestart", 1, 0, function()
         end
 
         return
+    end
+
+    if os.difftime(theTime, CFCDailyRestart.restartAt) % 60 == 0 then -- Quick fix for alerting players of restart
+        local diffTimeFormatted = os.date("*t", os.difftime(theTime, CFCDailyRestart.restartAt))
+
+        -- TODO: Alert how many seconds left
+        -- You'll want a logarithmic-ish function to alert at:
+        -- 15 min, 10min, 5min, 4min, 3min,2min,1min,30s,15s,10,9,8.. so on
+
+        CFCDailyRestart:sendAlertToClients("Restart in "..diffTimeFormatted.min.." minutes.")
     end
 end)
