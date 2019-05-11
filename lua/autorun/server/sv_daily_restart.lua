@@ -35,8 +35,6 @@ local function CFCDailyRestart:alertClientsOfServerRestart()
     net.Broadcast()
 end
 
---TODO: Create a timer to 
-
 timer.Create("CFC_DailyRestart", 1, 0, function()
     local theTime = os.time()
     local lastScheduledRestart = CFCDailyRestart.lastRestart
