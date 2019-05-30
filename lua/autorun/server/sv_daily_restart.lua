@@ -85,4 +85,8 @@ timer.Create("CFC_DailyRestart", 1, 0, function()
 
         CFCDailyRestart:sendAlertToClients("Restart in "..diffTimeFormatted.min.." minutes.")
     end
+
+    if currentTime >= CFCDailyRestart.restartAt then
+        CFCDailyRestart:restartServer()
+    end
 end)
