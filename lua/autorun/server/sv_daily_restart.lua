@@ -35,7 +35,7 @@ local function CFCDailyRestart:alertClientsOfServerRestart()
     net.Broadcast()
 end
 
-timer.Create("CFC_DailyRestart", 1, 0, function()
+local function DailyRestartThink()
     local currentTime = os.time()
     local lastScheduledRestart = CFCDailyRestart.lastRestart
     local isLastScheduledRestartValid = not lastScheduledRestart == nil
@@ -51,15 +51,17 @@ timer.Create("CFC_DailyRestart", 1, 0, function()
     --
     -- TODO (Future): Perhaps if there are fewer than N players on the server leading up to the restart time, allow them to vote to restart now and get it out of the way
 
-    if not countingDownToRestart then
+    if not CFCDailyRestart.countingDownToRestart then
         local isHourEquivalentToDesired = (formattedTime.hour == desiredRestartTime)
         local secondThreshold = 30
         local isSecondWithinThreshold = (formattedTime.sec <= secondThreshold)
+        local isWithinDesiredTime = isHourEquivalentToDesired and isSecondWithinThreshold
 
-        if isHourEquivalentToDesired and isSecondWithinThreshold then
+        if isWithinDesiredTime then
             local plyCount = table.Count(player.GetHumans())
+            local serverIsEmpty = (plyCount == 0)
 
-            if plyCount == 0 then
+            if serverIsEmpty then
                 CFCDailyRestart:restartServer()
             end
 
@@ -72,11 +74,20 @@ timer.Create("CFC_DailyRestart", 1, 0, function()
             CFCDailyRestart:alertClientsOfServerRestart()
             CFCDailyRestart.countingDownToRestart = true
         end
-
-        return
     end
 
-    if os.difftime(currentTime, CFCDailyRestart.restartAt) % 60 == 0 then -- Quick fix for alerting players of restart
+    timer.Remove("CFC_DailyRestart")
+end
+
+timer.Create("CFC_DailyRestart", 1, 0, DailyRestartThink)
+
+local function timedAlerts()
+    if not CFCDailyRestart.countingDownToRestart then return end
+
+    local currentTime = os.time()
+    local minClk = (os.difftime(currentTime, CFCDailyRestart.restartAt) % 60 == 0)
+
+    if minClk then -- Quick fix for alerting players of restart (alerts every minute)
         local diffTimeFormatted = os.date("*t", os.difftime(currentTime, CFCDailyRestart.restartAt))
 
         -- TODO: Alert how many seconds left
@@ -89,4 +100,6 @@ timer.Create("CFC_DailyRestart", 1, 0, function()
     if currentTime >= CFCDailyRestart.restartAt then
         CFCDailyRestart:restartServer()
     end
-end)
+end
+
+timer.Create("CFC_RestartAlerter", 1, 0, timedAlerts)
