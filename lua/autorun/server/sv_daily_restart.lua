@@ -1,6 +1,6 @@
 util.AddNetworkString( "AlertUsersOfRestart" )
 
-DesiredRestartHour = 3                         -- The hour to initiate a restart. Must be between 0-24
+DesiredRestartHour = 3  -- The hour to initiate a restart. Must be between 0-24
 
 local RestartUrl = file.Read( "cfc/restart/url.txt", "DATA" )
 
@@ -22,9 +22,13 @@ local currentTime = os.time
 -- END HELPERS --
 
 local function sendAlertToClients( message )
+    local formatted = "[CFC Daily Restart] " .. message
+
     for k, v in pairs( player.GetHumans() ) do
-        v:ChatPrint( "[CFC Daily Restart] " .. message )
+        v:ChatPrint( formatted)
     end
+
+    print( formatted )
 end
 
 local function sendRestartTimeToClients( timeOfRestart )
@@ -34,7 +38,8 @@ local function sendRestartTimeToClients( timeOfRestart )
 end
 
 local function restartServer()
-    print( "restarting server" )
+    sendAlertToClients("Restarting server!")
+
     local restartToken = file.Read( "cfc/restart/token.txt", "DATA" )
 
     http.Post( RestartUrl, { RestartToken = restartToken }, function( result )
@@ -61,9 +66,12 @@ local AlertIntervalsInMinutes = {
     1
 }
 
+local function allRestartAlertsGiven()
+    return table.Count( AlertIntervalsInMinutes ) == 0
+end
+
 local function canRestartServer()
-    -- No more intervals left, force restart
-    if table.Count( AlertIntervalsInMinutes ) == 0 then return true end
+    if allRestartAlertsGiven() then return true end
 
     local playersInServer = player.GetHumans()
     local serverIsEmpty = table.Count( playersInServer ) == 0
@@ -71,10 +79,14 @@ local function canRestartServer()
     return serverIsEmpty
 end
 
+local function getMinutesUntilNextAlert()
+    return table.remove( AlertIntervalsInMinutes, 1 )
+end
+
 local function onAlertTimeout()
     if canRestartServer() then return restartServer() end
 
-    local minutesUntilNextAlert = table.remove( AlertIntervalsInMinutes, 1 ) * 60
+    local minutesUntilNextAlert = getMinutesUntilNextAlert()
     local secondsUntilNextAlert = minutesToSeconds( minutesUntilNextAlert )
 
     nextAlertTime = currentTime() + secondsUntilNextAlert
@@ -84,10 +96,11 @@ local function onAlertTimeout()
 end
 
 
+-- DONT TOUCH THIS
 local function getHoursUntilRestartHour()
     local hoursLeft = 23
     local restartHour = DesiredRestartHour
-    local currentHour  = tonumber(os.date("%H"))
+    local currentHour = tonumber(os.date("%H"))
 
     if currentHour < restarthour then
       hoursLeft = restarthour - currentHour - 1
