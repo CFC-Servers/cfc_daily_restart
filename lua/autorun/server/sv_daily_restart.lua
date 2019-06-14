@@ -8,14 +8,20 @@ CFCDailyRestart.fileName                = "CFC_LastDailyRestart"
 CFCDailyRestart.countingDownToRestart   = false
 CFCDailyRestart.lastRestart             = file.Read(fileName..".txt", "DATA")
 
+local restartToken = file.Read("cfc/restart/token.txt", "DATA")
+local restartUrl = file.Read("cfc/restart/url.txt", "DATA")
+
 local function CFCDailyRestart:restartServer()
     print("restarting server")
     
-    file.Write(fileName..".txt", os.time())
+    file.Write(fileName .. ".txt", os.time())
 
-    --local params = {}
-    --local headers = {}
-    --http.Post("localhost:2327/gmod/restart", params, function() end, function() end, headers)
+    http.Post( restartUrl, { ["RestartToken"] = restartToken }, function( result )
+        if result then print( result ) end
+    end, function( failed )
+        --TODO: Do more here for failure
+        print( failed )
+    end )
 end
 
 local function CFCDailyRestart:sendAlertToClients(message)
