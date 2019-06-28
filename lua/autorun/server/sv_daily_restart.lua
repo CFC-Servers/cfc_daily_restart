@@ -1,8 +1,10 @@
 util.AddNetworkString( "AlertUsersOfRestart" )
 
-DesiredRestartHour = 3  -- The hour to initiate a restart. Must be between 0-24
+local DesiredRestartHour = 23  -- The hour to initiate a restart. Must be between 0-24
 
 local RestartUrl = file.Read( "cfc/restart/url.txt", "DATA" )
+RestartUrl = string.Replace(RestartUrl, "\r", "")
+RestartUrl = string.Replace(RestartUrl, "\n", "")
 
 local DailyRestartTimerName = "CFC_DailyRestartTimer"
 
@@ -42,7 +44,7 @@ local function restartServer()
 
     local restartToken = file.Read( "cfc/restart/token.txt", "DATA" )
 
-    http.Post( RestartUrl, { RestartToken = restartToken }, function( result )
+    http.Post( RestartUrl, { ["RestartToken"] = restartToken }, function( result )
         if result then print( result ) end
     end, function( failed )
         --TODO: Do more here for failure
@@ -97,15 +99,17 @@ end
 
 
 -- DONT TOUCH THIS
+-- NE TOUCHEZ PAS
+-- THAR BE DARGONS
 local function getHoursUntilRestartHour()
     local hoursLeft = 23
     local restartHour = DesiredRestartHour
     local currentHour = tonumber(os.date("%H"))
 
-    if currentHour < restarthour then
-      hoursLeft = restarthour - currentHour - 1
-    elseif currentHour > restarthour then
-      hoursLeft = (24 - currentHour) + restarthour - 1
+    if currentHour < restartHour then
+      hoursLeft = restartHour - currentHour - 1
+    elseif currentHour > restartHour then
+      hoursLeft = (24 - currentHour) + restartHour - 1
     end
 
     return hoursLeft
@@ -117,7 +121,7 @@ local function waitUntilRestartHour()
     local currentMinute = tonumber( os.date("%M") )
     local currentSecond = tonumber( os.date("%S") )
 
-    local hoursLeft = 23
+    local hoursLeft = getHoursUntilRestartHour()
 
     local secondsOffset = 60 - currentSecond
     local minutesOffset = 60 - currentMinute - 1
@@ -132,7 +136,6 @@ local function waitUntilRestartHour()
 
     timer.Create( DailyRestartTimerName, secondsToWait, 0, onAlertTimeout )
 end
-
 
 waitUntilRestartHour()
 
