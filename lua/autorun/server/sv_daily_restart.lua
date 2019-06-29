@@ -10,6 +10,27 @@ local DailyRestartTimerName = "CFC_DailyRestartTimer"
 
 -- HELPERS --
 
+local BaseAlertIntervalsInMinutes = {
+    45,
+    30,
+    15,
+    10,
+    9,
+    8,
+    7,
+    6,
+    5,
+    4,
+    3,
+    2,
+    1
+}
+
+local alertIntervalsInMinutes = {}
+local function initializeAlertIntervals()
+    alertIntervalsInMinutes = table.Copy( BaseAlertIntervalsInMinutes )
+end
+
 local SECONDS_IN_MINUTE = 60
 local function minutesToSeconds( minutes )
     return minutes * SECONDS_IN_MINUTE
@@ -39,37 +60,40 @@ local function sendRestartTimeToClients( timeOfRestart )
     net.Broadcast()
 end
 
+local FailedRequestRetryInterval = 10
+local FailedRequestNumRetries = 3
+local failedRequestRetryCount = 0
+
+local function handleFailedRestart( result )
+    if result then print( result ) end
+
+    if failedRequestRetryCount < FailedRequestNumRetries then
+        failedRequestRetryCount = failedRequestRetryCount + 1
+        timer.Simple( FailedRequestRetryInterval, restartServer )
+
+        return
+    end
+
+    failedRequestRetryCount = 0
+    initializeAlertIntervals()
+    waitUntilRestartHour()
+end
+
+local function handleSuccessfulRestart( result )
+    if result then print( result .. " But like... how?") end
+end
+
 local function restartServer()
     sendAlertToClients("Restarting server!")
 
     local restartToken = file.Read( "cfc/restart/token.txt", "DATA" )
 
-    http.Post( RestartUrl, { ["RestartToken"] = restartToken }, function( result )
-        if result then print( result ) end
-    end, function( failed )
-        --TODO: Do more here for failure
-        print( failed )
-    end )
+    http.Post( RestartUrl, { ["RestartToken"] = restartToken }, handleSuccessfulRestart, handleFailedRestart )
 end
 
-local AlertIntervalsInMinutes = {
-    45,
-    30,
-    15,
-    10,
-    9,
-    8,
-    7,
-    6,
-    5,
-    4,
-    3,
-    2,
-    1
-}
 
 local function allRestartAlertsGiven()
-    return table.Count( AlertIntervalsInMinutes ) == 0
+    return table.Count( alertIntervalsInMinutes ) == 0
 end
 
 local function canRestartServer()
@@ -82,7 +106,7 @@ local function canRestartServer()
 end
 
 local function getMinutesUntilNextAlert()
-    return table.remove( AlertIntervalsInMinutes, 1 )
+    return table.remove( alertIntervalsInMinutes, 1 )
 end
 
 local function onAlertTimeout()
@@ -94,7 +118,7 @@ local function onAlertTimeout()
     nextAlertTime = currentTime() + secondsUntilNextAlert
     sendAlertToClients( "Restarting server in " .. minutesUntilNextAlert .. " minutes!" )
 
-    timer.Adjust( DailyRestartTimerName, secondsUntilNextAlert, 0, onAlertTimeout )
+    timer.Adjust( DailyRestartTimerName, secondsUntilNextAlert, 1, onAlertTimeout )
 end
 
 
@@ -134,8 +158,9 @@ local function waitUntilRestartHour()
     local timeToRestart = currentTime() + secondsToWait
     sendRestartTimeToClients( timeToRestart )
 
-    timer.Create( DailyRestartTimerName, secondsToWait, 0, onAlertTimeout )
+    timer.Create( DailyRestartTimerName, secondsToWait, 1, onAlertTimeout )
 end
+
 
 waitUntilRestartHour()
 
