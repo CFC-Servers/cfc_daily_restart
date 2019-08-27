@@ -237,3 +237,7 @@ else
     waitUntilRestartHour()
 end
 
+
+DailyRestartTests.renew = function()
+    test_waitUntilRestartHour()   
+end
