@@ -1,6 +1,6 @@
 util.AddNetworkString( "AlertUsersOfRestart" )
 
-local DesiredRestartHour = 3  -- The hour to initiate a restart. Must be between 0-24
+local DesiredRestartHour = 19  -- The hour to initiate a restart. Must be between 0-24
 
 local RestartUrl = file.Read( "cfc/restart/url.txt", "DATA" )
 RestartUrl = string.Replace(RestartUrl, "\r", "")
@@ -64,6 +64,14 @@ local FailedRequestRetryInterval = 10
 local FailedRequestNumRetries = 3
 local failedRequestRetryCount = 0
 
+local function restartServer()
+    sendAlertToClients("Restarting server!")
+
+    local restartToken = file.Read( "cfc/restart/token.txt", "DATA" )
+
+    http.Post( RestartUrl, { ["RestartToken"] = restartToken }, handleSuccessfulRestart, handleFailedRestart )
+end
+
 local function handleFailedRestart( result )
     if result then print( result ) end
 
@@ -82,15 +90,6 @@ end
 local function handleSuccessfulRestart( result )
     if result then print( result .. " But like... how?") end
 end
-
-local function restartServer()
-    sendAlertToClients("Restarting server!")
-
-    local restartToken = file.Read( "cfc/restart/token.txt", "DATA" )
-
-    http.Post( RestartUrl, { ["RestartToken"] = restartToken }, handleSuccessfulRestart, handleFailedRestart )
-end
-
 
 local function allRestartAlertsGiven()
     return table.Count( alertIntervalsInMinutes ) == 0
