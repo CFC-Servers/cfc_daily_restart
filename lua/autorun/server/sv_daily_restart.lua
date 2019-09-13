@@ -202,6 +202,10 @@ end
 
 local SECONDS_IN_HOUR = 3600
 
+local function createRestartTimer(seconds)
+    timer.Create( DailyRestartTimerName, seconds, 1, onAlertTimeout )
+end
+
 -- Calculates up to 23:59:59 to wait until restart
 local function waitUntilRestartHour()
     local currentMinute = tonumber( os.date("%M") )
@@ -219,10 +223,8 @@ local function waitUntilRestartHour()
 
     local timeToRestart = currentTime() + secondsToWait
     sendRestartTimeToClients( timeToRestart )
-end
 
-local function createRestartTimer(seconds)
-    timer.Create( DailyRestartTimerName, seconds, 1, onAlertTimeout )
+    createRestartTimer( secondsToWait )
 end
 
 local function test_waitUntilRestartHour()
