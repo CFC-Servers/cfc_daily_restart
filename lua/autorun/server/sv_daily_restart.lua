@@ -12,8 +12,9 @@ local DailyRestartTimerName = "CFC_DailyRestartTimer"
 local TESTING_BOOLEAN = false
 
 local SERVER_START_TIME = os.time()
+local SECONDS_IN_HOUR = 3600
 local MINIMUM_HOURS_BEFORE_RESTART = 3
-local MINIMUM_SECONDS_BEFORE_RESTART = MINIMUM_HOURS_BEFORE_RESTART * 3600
+local MINIMUM_SECONDS_BEFORE_RESTART = MINIMUM_HOURS_BEFORE_RESTART * SECONDS_IN_HOUR
 local EARLIEST_RESTART_TIME = SERVER_START_TIME + MINIMUM_SECONDS_BEFORE_RESTART
 
 -- HELPERS --
@@ -219,7 +220,7 @@ local function waitUntilRestartHour()
     -- We are this many seconds into the hour
     local secondsAndMinutes = secondsOffset + ( minutesOffset * 60 )
 
-    local secondsToWait = (hoursLeft * SECONDS_IN_MINUTE) + secondsAndMinutes
+    local secondsToWait = (hoursLeft * SECONDS_IN_HOUR) - secondsAndMinutes
 
     local timeToRestart = currentTime() + secondsToWait
     sendRestartTimeToClients( timeToRestart )
