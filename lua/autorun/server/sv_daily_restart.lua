@@ -219,7 +219,7 @@ local function waitUntilRestartHour()
     -- We are this many seconds into the hour
     local secondsAndMinutes = secondsOffset + ( minutesOffset * 60 )
 
-    local secondsToWait = (hoursLeft * SECONDS_IN_MINUTE) - secondsAndMinutes
+    local secondsToWait = (hoursLeft * SECONDS_IN_MINUTE) + secondsAndMinutes
 
     local timeToRestart = currentTime() + secondsToWait
     sendRestartTimeToClients( timeToRestart )
