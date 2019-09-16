@@ -9,7 +9,7 @@ RestartUrl = string.Replace(RestartUrl, "\n", "")
 local DailyRestartTimerName = "CFC_DailyRestartTimer"
 
 -- DISABLE THIS IF NOT IN TESTING
-local TESTING_BOOLEAN = true
+local TESTING_BOOLEAN = false
 
 local SERVER_START_TIME = os.time()
 local MINIMUM_HOURS_BEFORE_RESTART = 3
