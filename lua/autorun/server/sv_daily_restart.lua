@@ -122,7 +122,7 @@ end
 
 local function handleSuccessfulRestart( result )
     if result then print( result ) end
-    --if result then print( result .. " But like... how?" ) end
+    -- if result then print( result .. " But like... how?" ) end
 end
 
 local function restartServer()
