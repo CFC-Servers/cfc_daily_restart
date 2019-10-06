@@ -3,8 +3,8 @@ util.AddNetworkString( "AlertUsersOfRestart" )
 local DesiredRestartHour = 3 -- The hour to initiate a restart. Must be between 0-24
 
 local RestartUrl = file.Read( "cfc/restart/url.txt", "DATA" )
-RestartUrl = string.Replace(RestartUrl, "\r", "")
-RestartUrl = string.Replace(RestartUrl, "\n", "")
+RestartUrl = string.Replace( RestartUrl, "\r", "" )
+RestartUrl = string.Replace( RestartUrl, "\n", "" )
 
 local DailyRestartTimerName = "CFC_DailyRestartTimer"
 
@@ -21,7 +21,7 @@ local EARLIEST_RESTART_TIME = SERVER_START_TIME + MINIMUM_SECONDS_BEFORE_RESTART
 
 local BaseAlertIntervalsInSeconds = {
     3600, -- 60 minutes
-    2700, -- 45 minutes 
+    2700, -- 45 minutes
     1800, -- 30 minutes
     900,  -- 15 minutes
     600,  -- 10 minutes
@@ -78,7 +78,7 @@ local function initializeAlertIntervals()
     end
 
     -- Fill AlertDeltas with the diffs between times
-    for i=2, #alertIntervalsInSeconds do
+    for i = 2, #alertIntervalsInSeconds do
         table.insert( AlertDeltas, alertIntervalsInSeconds[i-1] - alertIntervalsInSeconds[i] )
     end
 
@@ -103,7 +103,7 @@ local function sendAlertToClients( message )
     local formatted = "[CFC Daily Restart] " .. message
 
     for k, v in pairs( player.GetHumans() ) do
-        v:ChatPrint( formatted)
+        v:ChatPrint( formatted )
     end
 
     print( formatted )
@@ -122,7 +122,7 @@ end
 
 local function handleSuccessfulRestart( result )
     if result then print( result ) end
-    --if result then print( result .. " But like... how?") end
+    --if result then print( result .. " But like... how?" ) end
 end
 
 local function restartServer()
@@ -130,10 +130,10 @@ local function restartServer()
     local restartToken = file.Read( "cfc/restart/token.txt", "DATA" )
 
     if not TESTING_BOOLEAN then
-        sendAlertToClients("Restarting server!")
+        sendAlertToClients( "Restarting server!" )
         http.Post( RestartUrl, { ["RestartToken"] = restartToken }, handleSuccessfulRestart, handleFailedRestart )
     else
-        sendAlertToClients("Restarting server (not really, this is a test)!")
+        sendAlertToClients( "Restarting server ( not really, this is a test )!" )
     end
 end
 
@@ -166,7 +166,7 @@ local function onAlertTimeout()
     if secondsUntilNextAlert == nil or secondsUntilNextRestart == nil then return restartServer() end
 
     local msg = "Restarting server in "
-    
+
     local minutesUntilNextRestart = secondsToMinutes( secondsUntilNextRestart )
     if ( minutesUntilNextRestart >= 1 ) then
         msg = msg .. minutesUntilNextRestart .. " minute"
@@ -174,7 +174,7 @@ local function onAlertTimeout()
     else
         msg = msg .. secondsUntilNextRestart .. " second"
         if ( secondsUntilNextRestart > 1 ) then msg = msg .. "s" end
-    end    
+    end
     msg = msg .. "!"
 
     sendAlertToClients( msg )
@@ -189,12 +189,12 @@ end
 local function getHoursUntilRestartHour()
     local hoursLeft = 23
     local restartHour = DesiredRestartHour
-    local currentHour = tonumber(os.date("%H"))
+    local currentHour = tonumber( os.date( "%H" ) )
 
     if currentHour < restartHour then
       hoursLeft = restartHour - currentHour - 1
     elseif currentHour > restartHour then
-      hoursLeft = (24 - currentHour) + restartHour - 1
+      hoursLeft = ( 24 - currentHour ) + restartHour - 1
     end
 
     return hoursLeft
@@ -203,14 +203,14 @@ end
 
 local SECONDS_IN_HOUR = 3600
 
-local function createRestartTimer(seconds)
+local function createRestartTimer( seconds )
     timer.Create( DailyRestartTimerName, seconds, 1, onAlertTimeout )
 end
 
 -- Calculates up to 23:59:59 to wait until restart
 local function waitUntilRestartHour()
-    local currentMinute = tonumber( os.date("%M") )
-    local currentSecond = tonumber( os.date("%S") )
+    local currentMinute = tonumber( os.date( "%M" ) )
+    local currentSecond = tonumber( os.date( "%S" ) )
 
     local hoursLeft = getHoursUntilRestartHour()
 
@@ -220,7 +220,7 @@ local function waitUntilRestartHour()
     -- We are this many seconds into the hour
     local secondsAndMinutes = secondsOffset + ( minutesOffset * 60 )
 
-    local secondsToWait = (hoursLeft * SECONDS_IN_HOUR) - secondsAndMinutes
+    local secondsToWait = ( hoursLeft * SECONDS_IN_HOUR ) - secondsAndMinutes
 
     local timeToRestart = currentTime() + secondsToWait
     sendRestartTimeToClients( timeToRestart )
@@ -230,7 +230,7 @@ end
 
 local function test_waitUntilRestartHour()
     EARLIEST_RESTART_TIME = os.time() + 100
-    createRestartTimer(0)
+    createRestartTimer( 0 )
 end
 
 initializeAlertIntervals()
@@ -242,5 +242,5 @@ end
 
 
 DailyRestartTests.renew = function()
-    test_waitUntilRestartHour()   
+    test_waitUntilRestartHour()
 end
