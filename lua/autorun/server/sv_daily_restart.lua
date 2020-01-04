@@ -1,6 +1,6 @@
 util.AddNetworkString( "AlertUsersOfRestart" )
 
-local DesiredRestartHour = 3 -- The hour to initiate a restart. Must be between 0-24
+local DesiredRestartHour = 6 -- The hour to initiate a restart. Must be between 0-24
 
 local RestartUrl = file.Read( "cfc/restart/url.txt", "DATA" )
 RestartUrl = string.Replace( RestartUrl, "\r", "" )
