@@ -182,24 +182,19 @@ local function onAlertTimeout()
     timer.Adjust( DailyRestartTimerName, secondsUntilNextAlert, 1, onAlertTimeout )
 end
 
-
--- DONT TOUCH THIS
--- NE TOUCHEZ PAS
--- THAR BE DARGONS
 local function getHoursUntilRestartHour()
-    local hoursLeft = 23
+    local hoursLeft = 24
     local restartHour = DesiredRestartHour
     local currentHour = tonumber( os.date( "%H" ) )
 
     if currentHour < restartHour then
-      hoursLeft = restartHour - currentHour - 1
+      hoursLeft = restartHour - currentHour
     elseif currentHour > restartHour then
-      hoursLeft = ( 24 - currentHour ) + restartHour - 1
+      hoursLeft = ( 24 - currentHour ) + restartHour
     end
 
     return hoursLeft
 end
-
 
 local SECONDS_IN_HOUR = 3600
 
