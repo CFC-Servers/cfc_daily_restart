@@ -1,10 +1,8 @@
+require( "cfc_restart_lib" )
 util.AddNetworkString( "AlertUsersOfRestart" )
 
+local Restarter = CFCRestartLib()
 local DesiredRestartHour = 6 -- The hour to initiate a restart. Must be between 0-24
-
-local RestartUrl = file.Read( "cfc/restart/url.txt", "DATA" )
-RestartUrl = string.Replace( RestartUrl, "\r", "" )
-RestartUrl = string.Replace( RestartUrl, "\n", "" )
 
 local DailyRestartTimerName = "CFC_DailyRestartTimer"
 
@@ -127,11 +125,9 @@ end
 
 local function restartServer()
 
-    local restartToken = file.Read( "cfc/restart/token.txt", "DATA" )
-
     if not TESTING_BOOLEAN then
         sendAlertToClients( "Restarting server!" )
-        http.Post( RestartUrl, { ["RestartToken"] = restartToken }, handleSuccessfulRestart, handleFailedRestart )
+        Restarter:restart()
     else
         sendAlertToClients( "Restarting server ( not really, this is a test )!" )
     end
