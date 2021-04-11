@@ -5,21 +5,62 @@ local Restarter = CFCRestartLib()
 local DesiredRestartHour = 6 -- The hour to initiate a restart. Must be between 0-24
 
 local DailyRestartTimerName = "CFC_DailyRestartTimer"
+local SoftRestartTimerName = "CFC_SoftRestartTimer"
 
 -- DISABLE THIS IF NOT IN TESTING
 local TESTING_BOOLEAN = false
 
+local MINIMUM_HOURS_BEFORE_RESTART = 3
+local RESTART_BUFFER = 2 -- Will only trigger a soft restart if it isn't scheduled to be within this many hours of the hard restart
+local SOFT_RESTART_WINDOWS = { -- { X, Y } = At X hours since game start, a changelevel will occur if there are no more than Y players
+    {
+        timeSinceStart = 4,
+        playerMax = 4
+    },
+    {
+        timeSinceStart = 4.5,
+        playerMax = 4
+    },
+    {
+        timeSinceStart = 5,
+        playerMax = 8
+    },
+    {
+        timeSinceStart = 5.5,
+        playerMax = 10
+    },
+    {
+        timeSinceStart = 6,
+        playerMax = 12
+    },
+    {
+        timeSinceStart = 6.5,
+        playerMax = 14
+    },
+    {
+        timeSinceStart = 7,
+        playerMax = 20
+    },
+    {
+        timeSinceStart = 7.5,
+        playerMax = 24
+    },
+    {
+        timeSinceStart = 8,
+        playerMax = 10000
+    },
+}
+
 local SERVER_START_TIME = os.time()
 local SECONDS_IN_HOUR = 3600
-local MINIMUM_HOURS_BEFORE_RESTART = 3
 local MINIMUM_SECONDS_BEFORE_RESTART = MINIMUM_HOURS_BEFORE_RESTART * SECONDS_IN_HOUR
 local EARLIEST_RESTART_TIME = SERVER_START_TIME + MINIMUM_SECONDS_BEFORE_RESTART
+local LARGEST_ALERT_INTERVAL = 0
+RESTART_BUFFER = RESTART_BUFFER * SECONDS_IN_HOUR
 
 -- HELPERS --
 
 local BaseAlertIntervalsInSeconds = {
-    3600, -- 60 minutes
-    2700, -- 45 minutes
     1800, -- 30 minutes
     900,  -- 15 minutes
     600,  -- 10 minutes
@@ -66,8 +107,9 @@ TestAlertIntervalsInSeconds = {
 }
 
 local AlertDeltas = {}
-
 local alertIntervalsInSeconds = {}
+local currentSoftRestartWindow = 1
+
 local function initializeAlertIntervals()
     if TESTING_BOOLEAN then
         alertIntervalsInSeconds = table.Copy( TestAlertIntervalsInSeconds )
@@ -124,12 +166,29 @@ local function handleSuccessfulRestart( result )
 end
 
 local function restartServer()
-
     if not TESTING_BOOLEAN then
         sendAlertToClients( "Restarting server!" )
         Restarter:restart()
     else
         sendAlertToClients( "Restarting server ( not really, this is a test )!" )
+    end
+end
+
+local function softRestartServer()
+    if not TESTING_BOOLEAN then
+        sendAlertToClients( "Soft-restarting server!" )
+        
+        if CFCHeartBeat then
+            CFCHeartBeat:heartbeat()
+        end
+
+        if CFC_PropRestore then
+            CFC_PropRestore.SaveProps()
+        end
+
+        game.ConsoleCommand( "changelevel " .. game.GetMap() ..  "\n" )
+    else
+        sendAlertToClients( "Soft-restarting server ( not really, this is a test )!" )
     end
 end
 
@@ -139,6 +198,10 @@ end
 
 local function allRestartAlertsGiven()
     return table.Count( alertIntervalsInSeconds ) == 0
+end
+
+local function timeSinceStart()
+    return os.time() - SERVER_START_TIME
 end
 
 local function canRestartServer()
@@ -151,18 +214,23 @@ local function canRestartServer()
     return serverIsEmpty
 end
 
+local function canSoftRestartServer()
+    local softRestartTime = SOFT_RESTART_WINDOWS[currentSoftRestartWindow].timeSinceStart * SECONDS_IN_HOUR
+
+    if timeSinceStart() < softRestartTime then return false end
+    if allRestartAlertsGiven() then return true end
+
+    local playersInServer = player.GetHumans()
+    local serverIsEmpty = table.Count( playersInServer ) == 0
+
+    return serverIsEmpty
+end
+
 local function getSecondsUntilAlertAndRestart()
     return table.remove( AlertDeltas, 1 ), table.remove( alertIntervalsInSeconds, 1 )
 end
 
-local function onAlertTimeout()
-    if canRestartServer() then return restartServer() end
-
-    local secondsUntilNextAlert, secondsUntilNextRestart = getSecondsUntilAlertAndRestart()
-    if secondsUntilNextAlert == nil or secondsUntilNextRestart == nil then return restartServer() end
-
-    local msg = "Restarting server in "
-
+local function formatAlertMessage( msg, secondsUntilNextRestart )
     local minutesUntilNextRestart = secondsToMinutes( secondsUntilNextRestart )
     if ( minutesUntilNextRestart >= 1 ) then
         msg = msg .. minutesUntilNextRestart .. " minute"
@@ -171,11 +239,34 @@ local function onAlertTimeout()
         msg = msg .. secondsUntilNextRestart .. " second"
         if ( secondsUntilNextRestart > 1 ) then msg = msg .. "s" end
     end
-    msg = msg .. "!"
+
+    return msg .. "!"
+end
+
+local function onHardAlertTimeout()
+    if canRestartServer() then return restartServer() end
+
+    local secondsUntilNextAlert, secondsUntilNextRestart = getSecondsUntilAlertAndRestart()
+    if secondsUntilNextAlert == nil or secondsUntilNextRestart == nil then return restartServer() end
+
+    local msg = formatAlertMessage( "Restarting server in ", secondsUntilNextRestart )
 
     sendAlertToClients( msg )
 
-    timer.Adjust( DailyRestartTimerName, secondsUntilNextAlert, 1, onAlertTimeout )
+    timer.Adjust( DailyRestartTimerName, secondsUntilNextAlert, 1, onHardAlertTimeout )
+end
+
+local function onSoftAlertTimeout()
+    if canSoftRestartServer() then return softRestartServer() end
+
+    local secondsUntilNextAlert, secondsUntilNextRestart = getSecondsUntilAlertAndRestart()
+    if secondsUntilNextAlert == nil or secondsUntilNextRestart == nil then return softRestartServer() end
+
+    local msg = formatAlertMessage( "Soft-restarting server in ", secondsUntilNextRestart )
+
+    sendAlertToClients( msg )
+
+    timer.Create( DailyRestartTimerName, secondsUntilNextAlert, 1, onHardAlertTimeout )
 end
 
 local function getHoursUntilRestartHour()
@@ -195,7 +286,7 @@ end
 local SECONDS_IN_HOUR = 3600
 
 local function createRestartTimer( seconds )
-    timer.Create( DailyRestartTimerName, seconds, 1, onAlertTimeout )
+    timer.Create( DailyRestartTimerName, seconds, 1, onHardAlertTimeout )
 end
 
 -- Calculates up to 23:59:59 to wait until restart
@@ -219,6 +310,25 @@ local function waitUntilRestartHour()
     createRestartTimer( secondsToWait )
 end
 
+local function waitForNextSoftRestartWindow()
+    local window = SOFT_RESTART_WINDOWS[currentSoftRestartWindow]
+
+    if not window then return end -- Only happens if none of the windows have a huge playerMax to guarantee being ran
+
+    local timeUntilNextWindowAlert = window.timeSinceStart * SECONDS_IN_HOUR - timeSinceStart() - LARGEST_ALERT_INTERVAL
+
+    if os.time() + timeUntilNextWindowAlert + RESTART_BUFFER >= EARLIEST_RESTART_TIME then return end -- Hard restart is too close
+
+    timer.Create( SoftRestartTimerName, timeUntilNextWindowAlert, 1, function()
+        if #player.GetHumans() <= window.playerMax then
+            onSoftAlertTimeout()
+        else
+            currentSoftRestartWindow = currentSoftRestartWindow + 1
+            waitForNextSoftRestartWindow() 
+        end
+    end )
+end
+
 local function test_waitUntilRestartHour()
     EARLIEST_RESTART_TIME = os.time() + 100
     createRestartTimer( 0 )
@@ -226,9 +336,14 @@ end
 
 initializeAlertIntervals()
 if TESTING_BOOLEAN then
+    LARGEST_ALERT_INTERVAL = TestAlertIntervalsInSeconds[1]
+
     test_waitUntilRestartHour()
 else
+    LARGEST_ALERT_INTERVAL = BaseAlertIntervalsInSeconds[1]
+
     waitUntilRestartHour()
+    waitForNextSoftRestartWindow()
 end
 
 
