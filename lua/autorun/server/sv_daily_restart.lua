@@ -6,6 +6,7 @@ local DesiredRestartHour = 6 -- The hour to initiate a restart. Must be between 
 
 local DailyRestartTimerName = "CFC_DailyRestartTimer"
 local SoftRestartTimerName = "CFC_SoftRestartTimer"
+local AlertNotificationName = "CFC_DailyRestartAlert"
 
 -- DISABLE THIS IF NOT IN TESTING
 local TESTING_BOOLEAN = false
@@ -93,6 +94,35 @@ local BaseAlertIntervalsInSeconds = {
     1
 }
 
+local AlertNotificationColor = Color( 255, 135, 135, 255 )
+local AlertNotificationDiscardColor = Color( 230, 153, 58, 255 )
+local AlertIntervalsImportant = { -- { X, Y } = Alerts at time X will be accompanied by a CFC Notification which displays for Y seconds
+    {
+        1800, -- 30 minutes
+        240
+    },
+    {
+        900,  -- 15 minutes
+        120
+    },
+    {
+        600,  -- 10 minutes
+        60
+    },
+    {
+        300,  -- 5 minutes
+        60
+    },
+    {
+        60,   -- 1 minute
+        60
+    },
+    {
+        30, -- 30 seconds
+        30
+    },
+}
+
 DailyRestartTests = {}
 
 TestAlertIntervalsInSeconds = {
@@ -111,6 +141,16 @@ TestAlertIntervalsInSeconds = {
     2,
     1
 }
+
+do
+    local AlertIntervalsImportantReformatted = {}
+
+    for _, interval in pairs( AlertIntervalsImportant ) do
+        AlertIntervalsImportantReformatted[AlertIntervalsImportant[1]] = AlertIntervalsImportant[2]
+    end
+
+    AlertIntervalsImportant = AlertIntervalsImportantReformatted
+end
 
 local AlertDeltas = {}
 local alertIntervalsInSeconds = {}
@@ -187,6 +227,29 @@ local function sendRestartTimeToClients( timeOfRestart )
     net.Start( "AlertUsersOfRestart" )
         net.WriteFloat( timeOfRestart )
     net.Broadcast()
+end
+
+local function tryAlertNotification( secondsUntilNextAlert, msg )
+    if not CFCNotifications then return end
+
+    local notificationAlertDuration = AlertIntervalsImportant[secondsUntilNextAlert]
+
+    if notificationAlertDuration then
+        local notif = CFCNotifications.new( AlertNotificationName, "Buttons", true )
+
+        notif:SetTitle( "CFC Daily Restart" )
+        notif:SetPriority( CFCNotifications.PRIORITY_MAX )
+        notif:SetDisplayTime( notificationAlertDuration )
+        notif:SetText( msg )
+        notif:SetTextColor( AlertNotificationColor )
+        notif:SetCloseable( true )
+        notif:SetIgnoreable( false )
+        notif:SetTimed( true )
+
+        notif:AddButton( "Discard", AlertNotificationDiscardColor )
+
+        notif:Send( player.GetHuans() )
+    end
 end
 
 local function handleFailedRestart( result )
@@ -284,8 +347,10 @@ local function onHardAlertTimeout()
     if secondsUntilNextAlert == nil or secondsUntilNextRestart == nil then return restartServer() end
 
     local msg = formatAlertMessage( "Restarting server in ", secondsUntilNextRestart )
+    local notifMsg = msg .. "\nThis is a hard restart!\nThe server takes at most 5 minutes to come back online."
 
     sendAlertToClients( msg )
+    tryAlertNotification( secondsUntilNextAlert, notifMsg )
 
     timer.Adjust( DailyRestartTimerName, secondsUntilNextAlert, 1, onHardAlertTimeout )
 end
@@ -297,10 +362,12 @@ local function onSoftAlertTimeout()
     if secondsUntilNextAlert == nil or secondsUntilNextRestart == nil then return softRestartServer() end
 
     local msg = formatAlertMessage( "Soft-restarting server in ", secondsUntilNextRestart )
+    local notifMsg = msg .. "\nYou will remain connected and your props will be saved.\nThe restart will not take long."
     local noAccess, hasAccess = splitPlayersBySoftRestartStopAccess()
 
     sendAlertToClients( msg, noAccess )
     sendAlertToClients( msg .. " You can stop the changelevel with " .. SOFT_RESTART_STOP_COMMAND, hasAccess )
+    tryAlertNotification( secondsUntilNextAlert, notifMsg )
 
     timer.Create( SoftRestartTimerName, secondsUntilNextAlert, 1, onSoftAlertTimeout )
 end
