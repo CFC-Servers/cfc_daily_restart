@@ -455,7 +455,7 @@ DailyRestartTests.renew = function()
     test_waitUntilRestartHour()
 end
 
-hook.add( "PlayerSay", "", function( ply, msg )
+hook.add( "PlayerSay", "CFC_DailyRestart_StopSoftRestart", function( ply, msg )
     if msg ~= SOFT_RESTART_STOP_COMMAND then return end
     if not isValid( ply ) then return end
 
