@@ -10,6 +10,7 @@ local SoftRestartTimerName = "CFC_SoftRestartTimer"
 -- DISABLE THIS IF NOT IN TESTING
 local TESTING_BOOLEAN = false
 
+local SOFT_RESTART_STOP_COMMAND = "!stoprestart"
 local MINIMUM_HOURS_BEFORE_RESTART = 3
 local RESTART_BUFFER = 2 -- Will only trigger a soft restart if it isn't scheduled to be within this many hours of the hard restart
 local SOFT_RESTART_WINDOWS = { -- { X, Y } = At X hours since game start, a changelevel will occur if there are no more than Y players
@@ -49,6 +50,11 @@ local SOFT_RESTART_WINDOWS = { -- { X, Y } = At X hours since game start, a chan
         timeSinceStart = 8,
         playerMax = 10000
     },
+}
+local SOFT_RESTART_STOPPER_RANKS = { -- Players who either are superadmins or who have one of these ranks can stop soft restarts
+    admin = true,
+    superadmin = true,
+    owner = true,
 }
 
 local SERVER_START_TIME = os.time()
@@ -109,6 +115,7 @@ TestAlertIntervalsInSeconds = {
 local AlertDeltas = {}
 local alertIntervalsInSeconds = {}
 local currentSoftRestartWindow = 1
+local softRestartImminent = false
 
 local function initializeAlertIntervals()
     if TESTING_BOOLEAN then
@@ -116,6 +123,8 @@ local function initializeAlertIntervals()
     else
         alertIntervalsInSeconds = table.Copy( BaseAlertIntervalsInSeconds )
     end
+
+    AlertDeltas = {}
 
     -- Fill AlertDeltas with the diffs between times
     for i = 2, #alertIntervalsInSeconds do
@@ -139,14 +148,39 @@ local currentTime = os.time
 -- END HELPERS --
 
 
-local function sendAlertToClients( message )
+local function sendAlertToClients( message, plys )
     local formatted = "[CFC Daily Restart] " .. message
 
-    for k, v in pairs( player.GetHumans() ) do
+    for k, v in pairs( plys or player.GetHumans() ) do
         v:ChatPrint( formatted )
     end
 
     print( formatted )
+end
+
+local function canStopSoftRestart( ply )
+    if not isValid( ply ) then return false end
+    if ply:IsSuperAdmin() or SOFT_RESTART_STOPPER_RANKS[string.lower( ply:GetUserGroup() )] then return true end
+
+    return false
+end
+
+local function splitPlayersBySoftRestartStopAccess()
+    local noAccess = {}
+    local hasAccess = {}
+    local plys = player.GetHumans()
+
+    for i = 1, #plys do
+        local ply = plys[i]
+
+        if canStopSoftRestart( ply ) then
+            table.insert( hasAccess, ply )
+        else
+            table.insert( noAccess, ply )
+        end
+    end
+
+    return noAccess, hasAccess
 end
 
 local function sendRestartTimeToClients( timeOfRestart )
@@ -263,10 +297,12 @@ local function onSoftAlertTimeout()
     if secondsUntilNextAlert == nil or secondsUntilNextRestart == nil then return softRestartServer() end
 
     local msg = formatAlertMessage( "Soft-restarting server in ", secondsUntilNextRestart )
+    local noAccess, hasAccess = splitPlayersBySoftRestartStopAccess()
 
-    sendAlertToClients( msg )
+    sendAlertToClients( msg, noAccess )
+    sendAlertToClients( msg .. " You can stop the changelevel with " .. SOFT_RESTART_STOP_COMMAND, hasAccess )
 
-    timer.Create( DailyRestartTimerName, secondsUntilNextAlert, 1, onHardAlertTimeout )
+    timer.Create( SoftRestartTimerName, secondsUntilNextAlert, 1, onSoftAlertTimeout )
 end
 
 local function getHoursUntilRestartHour()
@@ -321,6 +357,7 @@ local function waitForNextSoftRestartWindow()
 
     timer.Create( SoftRestartTimerName, timeUntilNextWindowAlert, 1, function()
         if #player.GetHumans() <= window.playerMax then
+            softRestartImminent = true
             onSoftAlertTimeout()
         else
             currentSoftRestartWindow = currentSoftRestartWindow + 1
@@ -350,3 +387,24 @@ end
 DailyRestartTests.renew = function()
     test_waitUntilRestartHour()
 end
+
+hook.add( "PlayerSay", "", function( ply, msg )
+    if msg ~= SOFT_RESTART_STOP_COMMAND then return end
+    if not isValid( ply ) then return end
+
+    if not canStopSoftRestart( ply ) then
+        ply:ChatPrint( "You do not have access to that command!" )
+        
+        return ""
+    end
+    
+    timer.Remove( SoftRestartTimerName )
+    initializeAlertIntervals()
+
+    if currentSoftRestartWindow < #SOFT_RESTART_WINDOWS then
+        currentSoftRestartWindow = currentSoftRestartWindow + 1
+        waitForNextSoftRestartWindow()
+    end
+
+    sendAlertToClients( "The soft restart has been canceled." )
+end )
