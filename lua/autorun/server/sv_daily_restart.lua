@@ -94,7 +94,7 @@ local BaseAlertIntervalsInSeconds = {
     1
 }
 
-local AlertNotificationColor = Color( 255, 135, 135, 255 )
+local AlertNotificationColor = Color( 255, 255, 255, 255 )
 local AlertNotificationDiscardColor = Color( 230, 153, 58, 255 )
 local AlertIntervalsImportant = { -- { X, Y } = Alerts at time X will be accompanied by a CFC Notification which displays for Y seconds
     {
