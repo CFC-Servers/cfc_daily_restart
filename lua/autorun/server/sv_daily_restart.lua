@@ -274,10 +274,6 @@ end
 local function softRestartServer()
     if not TESTING_BOOLEAN then
         sendAlertToClients( "Soft-restarting server!" )
-        
-        if CFCHeartBeat then
-            CFCHeartBeat:heartbeat()
-        end
 
         if CFC_PropRestore then
             CFC_PropRestore.SaveProps()
