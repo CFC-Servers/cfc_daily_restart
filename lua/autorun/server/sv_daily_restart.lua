@@ -420,7 +420,7 @@ local function waitForNextSoftRestartWindow()
 
     local timeUntilNextWindowAlert = window.timeSinceStart * SECONDS_IN_HOUR - timeSinceStart() - LARGEST_ALERT_INTERVAL
 
-    if os.time() + timeUntilNextWindowAlert + RESTART_BUFFER >= EARLIEST_RESTART_TIME then return end -- Hard restart is too close
+    if os.time() + timeUntilNextWindowAlert + RESTART_BUFFER < EARLIEST_RESTART_TIME then return end -- Hard restart is too close
 
     timer.Create( SoftRestartTimerName, timeUntilNextWindowAlert, 1, function()
         if #player.GetHumans() <= window.playerMax then
