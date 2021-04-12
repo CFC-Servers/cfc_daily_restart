@@ -199,7 +199,7 @@ local function sendAlertToClients( message, plys )
 end
 
 local function canStopSoftRestart( ply )
-    if not isValid( ply ) then return false end
+    if not IsValid( ply ) then return false end
     if ply:IsSuperAdmin() or SOFT_RESTART_STOPPER_RANKS[string.lower( ply:GetUserGroup() )] then return true end
 
     return false
@@ -457,7 +457,7 @@ end
 
 hook.Add( "PlayerSay", "CFC_DailyRestart_StopSoftRestart", function( ply, msg )
     if msg ~= SOFT_RESTART_STOP_COMMAND then return end
-    if not isValid( ply ) then return end
+    if not IsValid( ply ) then return end
 
     if not canStopSoftRestart( ply ) then
         ply:ChatPrint( "You do not have access to that command!" )
