@@ -146,7 +146,7 @@ do
     local AlertIntervalsImportantReformatted = {}
 
     for _, interval in pairs( AlertIntervalsImportant ) do
-        AlertIntervalsImportantReformatted[AlertIntervalsImportant[1]] = AlertIntervalsImportant[2]
+        AlertIntervalsImportantReformatted[interval[1]] = interval[2]
     end
 
     AlertIntervalsImportant = AlertIntervalsImportantReformatted
@@ -229,10 +229,10 @@ local function sendRestartTimeToClients( timeOfRestart )
     net.Broadcast()
 end
 
-local function tryAlertNotification( secondsUntilNextAlert, msg )
+local function tryAlertNotification( secondsUntilNextRestart, msg )
     if not CFCNotifications then return end
 
-    local notificationAlertDuration = AlertIntervalsImportant[secondsUntilNextAlert]
+    local notificationAlertDuration = AlertIntervalsImportant[secondsUntilNextRestart]
 
     if notificationAlertDuration then
         local notif = CFCNotifications.new( AlertNotificationName, "Buttons", true )
@@ -248,7 +248,7 @@ local function tryAlertNotification( secondsUntilNextAlert, msg )
 
         notif:AddButton( "Discard", AlertNotificationDiscardColor )
 
-        notif:Send( player.GetHuans() )
+        notif:Send( player.GetHumans() )
     end
 end
 
@@ -350,7 +350,7 @@ local function onHardAlertTimeout()
     local notifMsg = msg .. "\nThis is a hard restart!\nThe server takes at most 5 minutes to come back online."
 
     sendAlertToClients( msg )
-    tryAlertNotification( secondsUntilNextAlert, notifMsg )
+    tryAlertNotification( secondsUntilNextRestart, notifMsg )
 
     timer.Adjust( DailyRestartTimerName, secondsUntilNextAlert, 1, onHardAlertTimeout )
 end
@@ -367,7 +367,7 @@ local function onSoftAlertTimeout()
 
     sendAlertToClients( msg, noAccess )
     sendAlertToClients( msg .. " You can stop the changelevel with " .. SOFT_RESTART_STOP_COMMAND, hasAccess )
-    tryAlertNotification( secondsUntilNextAlert, notifMsg )
+    tryAlertNotification( secondsUntilNextRestart, notifMsg )
 
     timer.Create( SoftRestartTimerName, secondsUntilNextAlert, 1, onSoftAlertTimeout )
 end
