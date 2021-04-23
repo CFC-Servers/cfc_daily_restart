@@ -343,7 +343,7 @@ local function onHardAlertTimeout()
     if secondsUntilNextAlert == nil or secondsUntilNextRestart == nil then return restartServer() end
 
     local msg = formatAlertMessage( "Restarting server in ", secondsUntilNextRestart )
-    local notifMsg = msg .. "\nThis is a hard restart!\nThe server takes at most 5 minutes to come back online."
+    local notifMsg = msg .. "\nThis is a hard restart!\nThe server takes at most 3 minutes to come back online."
 
     sendAlertToClients( msg )
     tryAlertNotification( secondsUntilNextRestart, notifMsg )
