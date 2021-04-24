@@ -1,6 +1,8 @@
 require( "cfc_restart_lib" )
 util.AddNetworkString( "AlertUsersOfRestart" )
 
+CFCDailyRestart = CFCDailyRestart or {}
+
 local Restarter = CFCRestartLib()
 local DesiredRestartHour = 6 -- The hour to initiate a restart. Must be between 0-24
 
@@ -155,7 +157,7 @@ end
 local AlertDeltas = {}
 local alertIntervalsInSeconds = {}
 local currentSoftRestartWindow = 1
-local softRestartImminent = false
+CFCDailyRestart.softRestartImminent = false
 
 local function initializeAlertIntervals()
     if TESTING_BOOLEAN then
@@ -200,7 +202,13 @@ end
 
 local function canStopSoftRestart( ply )
     if not IsValid( ply ) then return false end
-    if ply:IsSuperAdmin() or SOFT_RESTART_STOPPER_RANKS[string.lower( ply:GetUserGroup() )] then return true end
+    if ply:IsSuperAdmin() then return true end
+
+    if ULib then
+        if ULib.ucl.query( ply, "ulx stoprestart", true ) then return true end
+    else
+        if SOFT_RESTART_STOPPER_RANKS[string.lower( ply:GetUserGroup() )] then return true end
+    end
 
     return false
 end
@@ -420,7 +428,7 @@ local function waitForNextSoftRestartWindow()
 
     timer.Create( SoftRestartTimerName, timeUntilNextWindowAlert, 1, function()
         if #player.GetHumans() <= window.playerMax then
-            softRestartImminent = true
+            CFCDailyRestart.softRestartImminent = true
             onSoftAlertTimeout()
         else
             currentSoftRestartWindow = currentSoftRestartWindow + 1
@@ -451,6 +459,31 @@ DailyRestartTests.renew = function()
     test_waitUntilRestartHour()
 end
 
+function CFCDailyRestart.stopSoftRestart( hidePrint )
+    CFCDailyRestart.softRestartImminent = false
+    timer.Remove( SoftRestartTimerName )
+    initializeAlertIntervals()
+
+    if currentSoftRestartWindow < #SOFT_RESTART_WINDOWS then
+        currentSoftRestartWindow = currentSoftRestartWindow + 1
+        waitForNextSoftRestartWindow()
+    end
+
+    if CFCNotifications then
+        local notif = CFCNotifications.get( AlertNotificationName )
+
+        if notif then
+            notif:Remove()
+        end
+    end
+
+    if hidePrint then return end
+
+    sendAlertToClients( "The soft restart has been canceled." )
+end
+
+if ULib then return end
+
 hook.Add( "PlayerSay", "CFC_DailyRestart_StopSoftRestart", function( ply, msg )
     if msg ~= SOFT_RESTART_STOP_COMMAND then return end
     if not IsValid( ply ) then return end
@@ -461,20 +494,11 @@ hook.Add( "PlayerSay", "CFC_DailyRestart_StopSoftRestart", function( ply, msg )
         return ""
     end
 
-    if not softRestartImminent then
+    if not CFCDailyRestart.softRestartImminent then
         ply:ChatPrint( "There is no imminent soft restart!" )
 
         return ""
     end
 
-    softRestartImminent = false
-    timer.Remove( SoftRestartTimerName )
-    initializeAlertIntervals()
-
-    if currentSoftRestartWindow < #SOFT_RESTART_WINDOWS then
-        currentSoftRestartWindow = currentSoftRestartWindow + 1
-        waitForNextSoftRestartWindow()
-    end
-
-    sendAlertToClients( "The soft restart has been canceled." )
+    CFCDailyRestart.stopSoftRestart()
 end )
