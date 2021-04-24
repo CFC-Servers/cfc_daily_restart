@@ -460,7 +460,14 @@ hook.Add( "PlayerSay", "CFC_DailyRestart_StopSoftRestart", function( ply, msg )
         
         return ""
     end
-    
+
+    if not softRestartImminent then
+        ply:ChatPrint( "There is no imminent soft restart!" )
+
+        return ""
+    end
+
+    softRestartImminent = false
     timer.Remove( SoftRestartTimerName )
     initializeAlertIntervals()
 
