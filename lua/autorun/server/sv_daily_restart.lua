@@ -283,9 +283,7 @@ local function softRestartServer()
     if not TESTING_BOOLEAN then
         sendAlertToClients( "Soft-restarting server!" )
 
-        if CFC_PropRestore then
-            CFC_PropRestore.SaveProps()
-        end
+        hook.Run( "CFC_PropRestore_SaveProps" )
 
         game.ConsoleCommand( "changelevel " .. game.GetMap() ..  "\n" )
     else
