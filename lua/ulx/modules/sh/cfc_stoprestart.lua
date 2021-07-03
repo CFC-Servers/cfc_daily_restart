@@ -8,6 +8,15 @@ local cmd = CFCUlxCommands.stopRestart
 
 local CATEGORY_TYPE = "Utility"
 
+ProtectedCall( function()
+    require( "mixpanel" )
+end )
+
+local function mixpanelTrackPlyEvent( eventName, ply, data, reliable )
+    if not Mixpanel then return end
+    Mixpanel.TrackPlyEvent( eventName, ply, data, reliable )
+end
+
 function cmd.tryStop( caller )
     if CLIENT then return end
 
@@ -17,6 +26,7 @@ function cmd.tryStop( caller )
         return
     end
 
+    mixpanelTrackPlyEvent( "Restart stopped", ply )
     CFCDailyRestart.stopSoftRestart( true )
     ulx.fancyLogAdmin( caller, "#A canceled the soft restart" )
 end
