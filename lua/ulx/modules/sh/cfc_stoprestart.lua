@@ -26,7 +26,7 @@ function cmd.tryStop( caller )
         return
     end
 
-    mixpanelTrackPlyEvent( "Restart stopped", ply )
+    mixpanelTrackPlyEvent( "Player stopped automatic restart", ply )
     CFCDailyRestart.stopSoftRestart( true )
     ulx.fancyLogAdmin( caller, "#A canceled the soft restart" )
 end
