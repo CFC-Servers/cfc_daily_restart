@@ -101,27 +101,27 @@ local AlertNotificationDiscardColor = Color( 230, 153, 58, 255 )
 local AlertIntervalsImportant = { -- { X, Y } = Alerts at time X will be accompanied by a CFC Notification which displays for Y seconds
     {
         1800, -- 30 minutes
-        120
+        10
     },
     {
         900,  -- 15 minutes
-        120
+        10
     },
     {
         600,  -- 10 minutes
-        60
+        10
     },
     {
         300,  -- 5 minutes
-        60
+        15
     },
     {
         60,   -- 1 minute
-        60
+        15
     },
     {
         30, -- 30 seconds
-        30
+        15
     },
 }
 
