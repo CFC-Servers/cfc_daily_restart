@@ -9,6 +9,7 @@ local DesiredRestartHour = 6 -- The hour to initiate a restart. Must be between 
 local DailyRestartTimerName = "CFC_DailyRestartTimer"
 local SoftRestartTimerName = "CFC_SoftRestartTimer"
 local AlertNotificationName = "CFC_DailyRestartAlert"
+local AlertNotificationAdminName = "CFC_DailyRestartAlertAdmin"
 
 -- DISABLE THIS IF NOT IN TESTING
 local TESTING_BOOLEAN = false
@@ -107,6 +108,7 @@ local BaseAlertIntervalsInSeconds = {
 
 local AlertNotificationColor = Color( 255, 255, 255, 255 )
 local AlertNotificationDiscardColor = Color( 230, 153, 58, 255 )
+local AlertNotificationStopColor = Color( 41, 183, 185, 255 )
 local AlertIntervalsImportant = { -- { X, Y } = Alerts at time X will be accompanied by a CFC Notification which displays for Y seconds
     {
         1800, -- 30 minutes
@@ -248,7 +250,7 @@ local function sendRestartTimeToClients( timeOfRestart )
     net.Broadcast()
 end
 
-local function tryAlertNotification( secondsUntilNextRestart, msg )
+local function tryAlertNotification( secondsUntilNextRestart, msg, msgAdmin, noAccess, hasAccess )
     if not CFCNotifications then return end
 
     local notificationAlertDuration = AlertIntervalsImportant[secondsUntilNextRestart]
@@ -267,7 +269,34 @@ local function tryAlertNotification( secondsUntilNextRestart, msg )
 
         notif:AddButton( "Discard", AlertNotificationDiscardColor )
 
-        notif:Send( player.GetHumans() )
+        notif:Send( noAccess or player.GetHumans() )
+
+        if not msgAdmin then return end
+
+        local notifAdmin = CFCNotifications.new( AlertNotificationAdminName, "Buttons", true )
+
+        notifAdmin:SetTitle( "CFC Daily Restart" )
+        notifAdmin:SetPriority( CFCNotifications.PRIORITY_MAX )
+        notifAdmin:SetDisplayTime( notificationAlertDuration )
+        notifAdmin:SetText( msgAdmin )
+        notifAdmin:SetTextColor( AlertNotificationColor )
+        notifAdmin:SetCloseable( true )
+        notifAdmin:SetIgnoreable( false )
+        notifAdmin:SetTimed( true )
+
+        notifAdmin:AddButton( "Discard", AlertNotificationDiscardColor, false )
+
+        if CFCDailyRestart.softRestartSkippable then
+            notifAdmin:AddButton( "Stop the Restart", AlertNotificationStopColor, true )
+
+            function notifAdmin:OnButtonPressed( _, skip )
+                if not skip then return end
+
+                CFCDailyRestart.stopSoftRestart()
+            end
+        end
+
+        notifAdmin:Send( hasAccess or player.GetHumans() )
     end
 end
 
@@ -376,18 +405,21 @@ local function onSoftAlertTimeout()
 
     local msg = formatAlertMessage( "Soft-restarting server in ", secondsUntilNextRestart )
     local notifMsg = msg .. "\nYou will remain connected and your props will be saved.\nThe restart will not take long."
+    local notifMsgAdmin
     local noAccess, hasAccess = splitPlayersBySoftRestartStopAccess()
 
     sendAlertToClients( msg, noAccess )
 
     if CFCDailyRestart.softRestartSkippable then
         msg = msg .. " You can stop the changelevel with " .. SOFT_RESTART_STOP_COMMAND
+        notifMsgAdmin = notifMsg .. "\nYou can stop the changelevel with " .. SOFT_RESTART_STOP_COMMAND
     else
         msg = msg .. " **This changelevel cannot be stopped.**"
+        notifMsgAdmin = notifMsg .. "\n**This changelevel cannot be stopped.**"
     end
 
     sendAlertToClients( msg, hasAccess )
-    tryAlertNotification( secondsUntilNextRestart, notifMsg )
+    tryAlertNotification( secondsUntilNextRestart, notifMsg, notifMsgAdmin, noAccess, hasAccess )
 
     timer.Create( SoftRestartTimerName, secondsUntilNextAlert, 1, onSoftAlertTimeout )
 end
@@ -489,9 +521,14 @@ function CFCDailyRestart.stopSoftRestart( hidePrint )
 
     if CFCNotifications then
         local notif = CFCNotifications.get( AlertNotificationName )
+        local notifAdmin = CFCNotifications.get( AlertNotificationAdminName )
 
         if notif then
             notif:Remove()
+        end
+
+        if notifAdmin then
+            notifAdmin:Remove()
         end
     end
 
