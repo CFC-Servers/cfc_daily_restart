@@ -250,39 +250,35 @@ local function sendRestartTimeToClients( timeOfRestart )
     net.Broadcast()
 end
 
+local function newAlertNotification( notifID, msg )
+    local notif = CFCNotifications.new( notifID, "Buttons", true )
+
+    notif:SetTitle( "CFC Daily Restart" )
+    notif:SetPriority( CFCNotifications.PRIORITY_MAX )
+    notif:SetDisplayTime( notificationAlertDuration )
+    notif:SetText( msg )
+    notif:SetTextColor( AlertNotificationColor )
+    notif:SetCloseable( true )
+    notif:SetIgnoreable( false )
+    notif:SetTimed( true )
+
+    return notif
+end
+
 local function tryAlertNotification( secondsUntilNextRestart, msg, msgAdmin, noAccess, hasAccess )
     if not CFCNotifications then return end
 
     local notificationAlertDuration = AlertIntervalsImportant[secondsUntilNextRestart]
 
     if notificationAlertDuration then
-        local notif = CFCNotifications.new( AlertNotificationName, "Buttons", true )
-
-        notif:SetTitle( "CFC Daily Restart" )
-        notif:SetPriority( CFCNotifications.PRIORITY_MAX )
-        notif:SetDisplayTime( notificationAlertDuration )
-        notif:SetText( msg )
-        notif:SetTextColor( AlertNotificationColor )
-        notif:SetCloseable( true )
-        notif:SetIgnoreable( false )
-        notif:SetTimed( true )
+        local notif = newAlertNotification( AlertNotificationName, msg )
 
         notif:AddButton( "Discard", AlertNotificationDiscardColor )
-
         notif:Send( noAccess or player.GetHumans() )
 
         if not msgAdmin then return end
 
-        local notifAdmin = CFCNotifications.new( AlertNotificationAdminName, "Buttons", true )
-
-        notifAdmin:SetTitle( "CFC Daily Restart" )
-        notifAdmin:SetPriority( CFCNotifications.PRIORITY_MAX )
-        notifAdmin:SetDisplayTime( notificationAlertDuration )
-        notifAdmin:SetText( msgAdmin )
-        notifAdmin:SetTextColor( AlertNotificationColor )
-        notifAdmin:SetCloseable( true )
-        notifAdmin:SetIgnoreable( false )
-        notifAdmin:SetTimed( true )
+        local notifAdmin = newAlertNotification( AlertNotificationAdminName, msgAdmin )
 
         notifAdmin:AddButton( "Discard", AlertNotificationDiscardColor, false )
 
