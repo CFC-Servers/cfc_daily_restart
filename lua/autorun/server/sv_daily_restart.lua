@@ -19,39 +19,48 @@ local RESTART_BUFFER = 2 -- Will only trigger a soft restart if it isn't schedul
 local SOFT_RESTART_WINDOWS = { -- { X, Y } = At X hours since game start, a changelevel will occur if there are no more than Y players
     {
         timeSinceStart = 4,
-        playerMax = 4
+        playerMax = 4,
+        skippable = true
     },
     {
         timeSinceStart = 4.5,
-        playerMax = 4
+        playerMax = 4,
+        skippable = true
     },
     {
         timeSinceStart = 5,
-        playerMax = 8
+        playerMax = 8,
+        skippable = true
     },
     {
         timeSinceStart = 5.5,
-        playerMax = 10
+        playerMax = 10,
+        skippable = true
     },
     {
         timeSinceStart = 6,
-        playerMax = 12
+        playerMax = 12,
+        skippable = true
     },
     {
         timeSinceStart = 6.5,
-        playerMax = 14
+        playerMax = 14,
+        skippable = true
     },
     {
         timeSinceStart = 7,
-        playerMax = 20
+        playerMax = 20,
+        skippable = true
     },
     {
         timeSinceStart = 7.5,
-        playerMax = 24
+        playerMax = 24,
+        skippable = true
     },
     {
         timeSinceStart = 8,
-        playerMax = 10000
+        playerMax = 10000,
+        skippable = false
     },
 }
 local SOFT_RESTART_STOPPER_RANKS = { -- Players who either are superadmins or who have one of these ranks can stop soft restarts
@@ -158,6 +167,7 @@ local AlertDeltas = {}
 local alertIntervalsInSeconds = {}
 local currentSoftRestartWindow = 1
 CFCDailyRestart.softRestartImminent = false
+CFCDailyRestart.softRestartSkippable = true
 
 local function initializeAlertIntervals()
     if TESTING_BOOLEAN then
@@ -201,6 +211,7 @@ local function sendAlertToClients( message, plys )
 end
 
 local function canStopSoftRestart( ply )
+    if not CFCDailyRestart.softRestartSkippable then return end
     if not IsValid( ply ) then return false end
     if ply:IsSuperAdmin() then return true end
 
@@ -368,7 +379,14 @@ local function onSoftAlertTimeout()
     local noAccess, hasAccess = splitPlayersBySoftRestartStopAccess()
 
     sendAlertToClients( msg, noAccess )
-    sendAlertToClients( msg .. " You can stop the changelevel with " .. SOFT_RESTART_STOP_COMMAND, hasAccess )
+
+    if CFCDailyRestart.softRestartSkippable then
+        msg = msg .. " You can stop the changelevel with " .. SOFT_RESTART_STOP_COMMAND
+    else
+        msg = msg .. " **This changelevel cannot be stopped.**"
+    end
+
+    sendAlertToClients( msg, hasAccess )
     tryAlertNotification( secondsUntilNextRestart, notifMsg )
 
     timer.Create( SoftRestartTimerName, secondsUntilNextAlert, 1, onSoftAlertTimeout )
@@ -428,6 +446,7 @@ local function waitForNextSoftRestartWindow()
     timer.Create( SoftRestartTimerName, timeUntilNextWindowAlert, 1, function()
         if #player.GetHumans() <= window.playerMax then
             CFCDailyRestart.softRestartImminent = true
+            CFCDailyRestart.softRestartSkippable = window.skippable
             onSoftAlertTimeout()
         else
             currentSoftRestartWindow = currentSoftRestartWindow + 1
@@ -487,9 +506,15 @@ hook.Add( "PlayerSay", "CFC_DailyRestart_StopSoftRestart", function( ply, msg )
     if msg ~= SOFT_RESTART_STOP_COMMAND then return end
     if not IsValid( ply ) then return end
 
-    if not canStopSoftRestart( ply ) then
+    local canStop = canStopSoftRestart( ply )
+
+    if canStop == nil then
+        ply:ChatPrint( "This soft restart is unstoppable!" )
+
+        return ""
+    elseif not canStop then
         ply:ChatPrint( "You do not have access to that command!" )
-        
+
         return ""
     end
 
