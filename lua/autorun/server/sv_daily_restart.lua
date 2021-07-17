@@ -4,12 +4,12 @@ util.AddNetworkString( "AlertUsersOfRestart" )
 CFCDailyRestart = CFCDailyRestart or {}
 
 local Restarter = CFCRestartLib()
-local DesiredRestartHour = 6 -- The hour to initiate a restart. Must be between 0-24
+local DESIRED_RESTART_HOUR = 6 -- The hour to initiate a restart. Must be between 0-24
 
-local DailyRestartTimerName = "CFC_DailyRestartTimer"
-local SoftRestartTimerName = "CFC_SoftRestartTimer"
-local AlertNotificationName = "CFC_DailyRestartAlert"
-local AlertNotificationAdminName = "CFC_DailyRestartAlertAdmin"
+local DAILY_RESTART_TIMER_NAME = "CFC_DailyRestartTimer"
+local SOFT_RESTART_TIMER_NAME = "CFC_SoftRestartTimer"
+local ALERT_NOTIFICATION_NAME = "CFC_DailyRestartAlert"
+local ALERT_NOTIFICATION_ADMIN_NAME = "CFC_DailyRestartAlertAdmin"
 
 -- DISABLE THIS IF NOT IN TESTING
 local TESTING_BOOLEAN = false
@@ -79,7 +79,7 @@ RESTART_BUFFER = RESTART_BUFFER * SECONDS_IN_HOUR
 
 -- HELPERS --
 
-local BaseAlertIntervalsInSeconds = {
+local BASE_ALERT_INTERVALS_IN_SECONDS = {
     1800, -- 30 minutes
     900,  -- 15 minutes
     600,  -- 10 minutes
@@ -106,10 +106,10 @@ local BaseAlertIntervalsInSeconds = {
     1
 }
 
-local AlertNotificationColor = Color( 255, 255, 255, 255 )
-local AlertNotificationDiscardColor = Color( 230, 153, 58, 255 )
-local AlertNotificationStopColor = Color( 41, 183, 185, 255 )
-local AlertIntervalsImportant = { -- { X, Y } = Alerts at time X will be accompanied by a CFC Notification which displays for Y seconds
+local ALERT_NOTIFICATION_COLOR = Color( 255, 255, 255, 255 )
+local ALERT_NOTIFICATION_DISCARD_COLOR = Color( 230, 153, 58, 255 )
+local ALERT_NOTIFICATION_STOP_COLOR = Color( 41, 183, 185, 255 )
+local ALERT_INTERVALS_IMPORTANT = { -- { X, Y } = Alerts at time X will be accompanied by a CFC Notification which displays for Y seconds
     {
         1800, -- 30 minutes
         10
@@ -136,9 +136,9 @@ local AlertIntervalsImportant = { -- { X, Y } = Alerts at time X will be accompa
     },
 }
 
-DailyRestartTests = {}
+DAILY_RESTART_TESTS = {}
 
-TestAlertIntervalsInSeconds = {
+TEST_ALERT_INTERVALS_IN_SECONDS = {
     60,
     45,
     30,
@@ -156,13 +156,13 @@ TestAlertIntervalsInSeconds = {
 }
 
 do
-    local AlertIntervalsImportantReformatted = {}
+    local ALERT_INTERVALS_IMPORTANTReformatted = {}
 
-    for _, interval in pairs( AlertIntervalsImportant ) do
-        AlertIntervalsImportantReformatted[interval[1]] = interval[2]
+    for _, interval in pairs( ALERT_INTERVALS_IMPORTANT ) do
+        ALERT_INTERVALS_IMPORTANTReformatted[interval[1]] = interval[2]
     end
 
-    AlertIntervalsImportant = AlertIntervalsImportantReformatted
+    ALERT_INTERVALS_IMPORTANT = ALERT_INTERVALS_IMPORTANTReformatted
 end
 
 local AlertDeltas = {}
@@ -173,9 +173,9 @@ CFCDailyRestart.softRestartSkippable = true
 
 local function initializeAlertIntervals()
     if TESTING_BOOLEAN then
-        alertIntervalsInSeconds = table.Copy( TestAlertIntervalsInSeconds )
+        alertIntervalsInSeconds = table.Copy( TEST_ALERT_INTERVALS_IN_SECONDS )
     else
-        alertIntervalsInSeconds = table.Copy( BaseAlertIntervalsInSeconds )
+        alertIntervalsInSeconds = table.Copy( BASE_ALERT_INTERVALS_IN_SECONDS )
     end
 
     AlertDeltas = {}
@@ -257,7 +257,7 @@ local function newAlertNotification( notifID, msg )
     notif:SetPriority( CFCNotifications.PRIORITY_MAX )
     notif:SetDisplayTime( notificationAlertDuration )
     notif:SetText( msg )
-    notif:SetTextColor( AlertNotificationColor )
+    notif:SetTextColor( ALERT_NOTIFICATION_COLOR )
     notif:SetCloseable( true )
     notif:SetIgnoreable( false )
     notif:SetTimed( true )
@@ -268,22 +268,22 @@ end
 local function tryAlertNotification( secondsUntilNextRestart, msg, msgAdmin, noAccess, hasAccess )
     if not CFCNotifications then return end
 
-    local notificationAlertDuration = AlertIntervalsImportant[secondsUntilNextRestart]
+    local notificationAlertDuration = ALERT_INTERVALS_IMPORTANT[secondsUntilNextRestart]
 
     if notificationAlertDuration then
-        local notif = newAlertNotification( AlertNotificationName, msg )
+        local notif = newAlertNotification( ALERT_NOTIFICATION_NAME, msg )
 
-        notif:AddButton( "Discard", AlertNotificationDiscardColor )
+        notif:AddButton( "Discard", ALERT_NOTIFICATION_DISCARD_COLOR )
         notif:Send( noAccess or player.GetHumans() )
 
         if not msgAdmin then return end
 
-        local notifAdmin = newAlertNotification( AlertNotificationAdminName, msgAdmin )
+        local notifAdmin = newAlertNotification( ALERT_NOTIFICATION_ADMIN_NAME, msgAdmin )
 
-        notifAdmin:AddButton( "Discard", AlertNotificationDiscardColor, false )
+        notifAdmin:AddButton( "Discard", ALERT_NOTIFICATION_DISCARD_COLOR, false )
 
         if CFCDailyRestart.softRestartSkippable then
-            notifAdmin:AddButton( "Stop the Restart", AlertNotificationStopColor, true )
+            notifAdmin:AddButton( "Stop the Restart", ALERT_NOTIFICATION_STOP_COLOR, true )
 
             function notifAdmin:OnButtonPressed( _, skip )
                 if not skip then return end
@@ -327,7 +327,7 @@ local function softRestartServer()
     end
 end
 
-DailyRestartTests.restartServer = function()
+DAILY_RESTART_TESTS.restartServer = function()
     restartServer()
 end
 
@@ -390,7 +390,7 @@ local function onHardAlertTimeout()
     sendAlertToClients( msg )
     tryAlertNotification( secondsUntilNextRestart, notifMsg )
 
-    timer.Adjust( DailyRestartTimerName, secondsUntilNextAlert, 1, onHardAlertTimeout )
+    timer.Adjust( DAILY_RESTART_TIMER_NAME, secondsUntilNextAlert, 1, onHardAlertTimeout )
 end
 
 local function onSoftAlertTimeout()
@@ -417,12 +417,12 @@ local function onSoftAlertTimeout()
     sendAlertToClients( msg, hasAccess )
     tryAlertNotification( secondsUntilNextRestart, notifMsg, notifMsgAdmin, noAccess, hasAccess )
 
-    timer.Create( SoftRestartTimerName, secondsUntilNextAlert, 1, onSoftAlertTimeout )
+    timer.Create( SOFT_RESTART_TIMER_NAME, secondsUntilNextAlert, 1, onSoftAlertTimeout )
 end
 
 local function getHoursUntilRestartHour()
     local hoursLeft = 24
-    local restartHour = DesiredRestartHour
+    local restartHour = DESIRED_RESTART_HOUR
     local currentHour = tonumber( os.date( "%H" ) )
 
     if currentHour < restartHour then
@@ -437,7 +437,7 @@ end
 local SECONDS_IN_HOUR = 3600
 
 local function createRestartTimer( seconds )
-    timer.Create( DailyRestartTimerName, seconds, 1, onHardAlertTimeout )
+    timer.Create( DAILY_RESTART_TIMER_NAME, seconds, 1, onHardAlertTimeout )
 end
 
 -- Calculates up to 23:59:59 to wait until restart
@@ -471,7 +471,7 @@ local function waitForNextSoftRestartWindow()
     if os.time() + timeUntilNextWindowAlert < EARLIEST_RESTART_TIME then return end -- Too early to restart
     if timeUntilNextWindowAlert + RESTART_BUFFER > getHoursUntilRestartHour() * SECONDS_IN_HOUR then return end -- Hard restart is too close
 
-    timer.Create( SoftRestartTimerName, timeUntilNextWindowAlert, 1, function()
+    timer.Create( SOFT_RESTART_TIMER_NAME, timeUntilNextWindowAlert, 1, function()
         if #player.GetHumans() <= window.playerMax then
             CFCDailyRestart.softRestartImminent = true
             CFCDailyRestart.softRestartSkippable = window.skippable
@@ -490,24 +490,24 @@ end
 
 initializeAlertIntervals()
 if TESTING_BOOLEAN then
-    LARGEST_ALERT_INTERVAL = TestAlertIntervalsInSeconds[1]
+    LARGEST_ALERT_INTERVAL = TEST_ALERT_INTERVALS_IN_SECONDS[1]
 
     test_waitUntilRestartHour()
 else
-    LARGEST_ALERT_INTERVAL = BaseAlertIntervalsInSeconds[1]
+    LARGEST_ALERT_INTERVAL = BASE_ALERT_INTERVALS_IN_SECONDS[1]
 
     waitUntilRestartHour()
     waitForNextSoftRestartWindow()
 end
 
 
-DailyRestartTests.renew = function()
+DAILY_RESTART_TESTS.renew = function()
     test_waitUntilRestartHour()
 end
 
 function CFCDailyRestart.stopSoftRestart( hidePrint )
     CFCDailyRestart.softRestartImminent = false
-    timer.Remove( SoftRestartTimerName )
+    timer.Remove( SOFT_RESTART_TIMER_NAME )
     initializeAlertIntervals()
 
     if currentSoftRestartWindow < #SOFT_RESTART_WINDOWS then
@@ -516,8 +516,8 @@ function CFCDailyRestart.stopSoftRestart( hidePrint )
     end
 
     if CFCNotifications then
-        local notif = CFCNotifications.get( AlertNotificationName )
-        local notifAdmin = CFCNotifications.get( AlertNotificationAdminName )
+        local notif = CFCNotifications.get( ALERT_NOTIFICATION_NAME )
+        local notifAdmin = CFCNotifications.get( ALERT_NOTIFICATION_ADMIN_NAME )
 
         if notif then
             notif:Remove()
