@@ -250,12 +250,12 @@ local function sendRestartTimeToClients( timeOfRestart )
     net.Broadcast()
 end
 
-local function newAlertNotification( notifID, msg )
+local function newAlertNotification( notifID, msg, duration )
     local notif = CFCNotifications.new( notifID, "Buttons", true )
 
     notif:SetTitle( "CFC Daily Restart" )
     notif:SetPriority( CFCNotifications.PRIORITY_MAX )
-    notif:SetDisplayTime( notificationAlertDuration )
+    notif:SetDisplayTime( duration or 10 )
     notif:SetText( msg )
     notif:SetTextColor( ALERT_NOTIFICATION_COLOR )
     notif:SetCloseable( true )
@@ -271,14 +271,14 @@ local function tryAlertNotification( secondsUntilNextRestart, msg, msgAdmin, noA
     local notificationAlertDuration = ALERT_INTERVALS_IMPORTANT[secondsUntilNextRestart]
 
     if notificationAlertDuration then
-        local notif = newAlertNotification( ALERT_NOTIFICATION_NAME, msg )
+        local notif = newAlertNotification( ALERT_NOTIFICATION_NAME, msg, notificationAlertDuration )
 
         notif:AddButton( "Discard", ALERT_NOTIFICATION_DISCARD_COLOR )
         notif:Send( noAccess or player.GetHumans() )
 
         if not msgAdmin then return end
 
-        local notifAdmin = newAlertNotification( ALERT_NOTIFICATION_ADMIN_NAME, msgAdmin )
+        local notifAdmin = newAlertNotification( ALERT_NOTIFICATION_ADMIN_NAME, msgAdmin, notificationAlertDuration )
 
         notifAdmin:AddButton( "Discard", ALERT_NOTIFICATION_DISCARD_COLOR, false )
 
