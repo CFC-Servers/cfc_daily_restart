@@ -13,9 +13,9 @@ ProtectedCall( function()
     require( "mixpanel" )
 end )
 
-local function mixpanelTrackPlyEvent( eventName, ply, data, reliable )
+local function mixpanelTrackEvent( eventName, ply, data )
     if not Mixpanel then return end
-    Mixpanel.TrackPlyEvent( eventName, ply, data, reliable )
+    Mixpanel:TrackPlyEvent( eventName, ply, data )
 end
 
 function cmd.tryStop( caller )
@@ -29,12 +29,7 @@ function cmd.tryStop( caller )
 
     amountOfStops = amountOfStops + 1
 
-    local eventData = {
-        playerCount = player.GetCount(),
-        amountOfStops = amountOfStops
-    }
-
-    mixpanelTrackPlyEvent( "Player stopped automatic restart", ply, eventData )
+    mixpanelTrackPlyEvent( "Player stopped automatic restart", ply, { playerCount = player.GetCount(), amountOfStops = amountOfStops } )
 
     CFCDailyRestart.stopSoftRestart( true )
     ulx.fancyLogAdmin( caller, "#A canceled the soft restart" )
