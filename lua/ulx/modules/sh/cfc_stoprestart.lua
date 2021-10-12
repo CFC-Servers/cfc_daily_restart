@@ -7,16 +7,6 @@ CFCUlxCommands.stopRestart = {}
 local cmd = CFCUlxCommands.stopRestart
 
 local CATEGORY_TYPE = "Utility"
-local amountOfStops = 0
-
-ProtectedCall( function()
-    require( "mixpanel" )
-end )
-
-local function mixpanelTrackEvent( eventName, ply, data )
-    if not Mixpanel then return end
-    Mixpanel:TrackPlyEvent( eventName, ply, data )
-end
 
 function cmd.tryStop( caller )
     if CLIENT then return end
@@ -27,11 +17,7 @@ function cmd.tryStop( caller )
         return
     end
 
-    amountOfStops = amountOfStops + 1
-
-    mixpanelTrackPlyEvent( "Player stopped automatic restart", ply, { playerCount = player.GetCount(), amountOfStops = amountOfStops } )
-
-    CFCDailyRestart.stopSoftRestart( true )
+    CFCDailyRestart.stopSoftRestart( caller, true )
     ulx.fancyLogAdmin( caller, "#A canceled the soft restart" )
 end
 

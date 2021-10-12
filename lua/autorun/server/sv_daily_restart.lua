@@ -170,6 +170,21 @@ local alertIntervalsInSeconds = {}
 local currentSoftRestartWindow = 1
 CFCDailyRestart.softRestartImminent = false
 CFCDailyRestart.softRestartSkippable = true
+CFCDailyRestart.numSoftStops = CFCDailyRestart.numSoftStops or 0
+
+ProtectedCall( function()
+    require( "mixpanel" )
+end )
+
+local function mixpanelTrackEvent( eventName, data, reliable )
+    if not Mixpanel then return end
+    Mixpanel:TrackEvent( eventName, data, reliable )
+end
+
+local function mixpanelTrackPlyEvent( eventName, ply, data, reliable )
+    if not Mixpanel then return end
+    Mixpanel:TrackPlyEvent( eventName, ply, data, reliable )
+end
 
 local function initializeAlertIntervals()
     if TESTING_BOOLEAN then
@@ -285,10 +300,10 @@ local function tryAlertNotification( secondsUntilNextRestart, msg, msgAdmin, noA
         if CFCDailyRestart.softRestartSkippable then
             notifAdmin:AddButton( "Stop the Restart", ALERT_NOTIFICATION_STOP_COLOR, true )
 
-            function notifAdmin:OnButtonPressed( _, skip )
+            function notifAdmin:OnButtonPressed( ply, skip )
                 if not skip then return end
 
-                CFCDailyRestart.stopSoftRestart()
+                CFCDailyRestart.stopSoftRestart( ply )
             end
         end
 
@@ -505,7 +520,7 @@ DAILY_RESTART_TESTS.renew = function()
     test_waitUntilRestartHour()
 end
 
-function CFCDailyRestart.stopSoftRestart( hidePrint )
+function CFCDailyRestart.stopSoftRestart( ply, hidePrint )
     CFCDailyRestart.softRestartImminent = false
     timer.Remove( SOFT_RESTART_TIMER_NAME )
     initializeAlertIntervals()
@@ -526,6 +541,16 @@ function CFCDailyRestart.stopSoftRestart( hidePrint )
         if notifAdmin then
             notifAdmin:Remove()
         end
+    end
+
+    local stopCount = CFCDailyRestart.numSoftStops + 1
+    local mixPanelData = { playerCount = player.GetCount(), amountOfStops = stopCount }
+    CFCDailyRestart.numSoftStops = stopCount
+
+    if ply then
+        mixpanelTrackPlyEvent( "Ply stopped soft restart", ply, mixPanelData )
+    else
+        mixpanelTrackEvent( "Soft restart stopped", mixPanelData )
     end
 
     if hidePrint then return end
@@ -557,5 +582,5 @@ hook.Add( "PlayerSay", "CFC_DailyRestart_StopSoftRestart", function( ply, msg )
         return ""
     end
 
-    CFCDailyRestart.stopSoftRestart()
+    CFCDailyRestart.stopSoftRestart( ply )
 end )
