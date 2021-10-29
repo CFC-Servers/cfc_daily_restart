@@ -544,7 +544,7 @@ function CFCDailyRestart.stopSoftRestart( ply, hidePrint )
     end
 
     local stopCount = CFCDailyRestart.numSoftStops + 1
-    local mixPanelData = { playerCount = player.GetCount(), amountOfStops = stopCount }
+    local mixPanelData = { playerCount = #player.GetHumans(), amountOfStops = stopCount }
     CFCDailyRestart.numSoftStops = stopCount
 
     if IsValid( ply ) and ply:IsPlayer() then
