@@ -547,7 +547,7 @@ function CFCDailyRestart.stopSoftRestart( ply, hidePrint )
     local mixPanelData = { playerCount = player.GetCount(), amountOfStops = stopCount }
     CFCDailyRestart.numSoftStops = stopCount
 
-    if IsValid( ply ) and ply:GetClass() == "player" then
+    if IsValid( ply ) and ply:IsPlayer() then
         mixpanelTrackPlyEvent( "Ply stopped soft restart", ply, mixPanelData )
     else
         mixpanelTrackEvent( "Soft restart stopped", mixPanelData )
