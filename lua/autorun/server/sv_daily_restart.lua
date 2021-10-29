@@ -24,38 +24,8 @@ local SOFT_RESTART_WINDOWS = { -- { X, Y } = At X hours since game start, a chan
         skippable = true
     },
     {
-        timeSinceStart = 4.5,
-        playerMax = 4,
-        skippable = true
-    },
-    {
-        timeSinceStart = 5,
-        playerMax = 8,
-        skippable = true
-    },
-    {
-        timeSinceStart = 5.5,
-        playerMax = 10,
-        skippable = true
-    },
-    {
         timeSinceStart = 6,
         playerMax = 12,
-        skippable = true
-    },
-    {
-        timeSinceStart = 6.5,
-        playerMax = 14,
-        skippable = true
-    },
-    {
-        timeSinceStart = 7,
-        playerMax = 20,
-        skippable = true
-    },
-    {
-        timeSinceStart = 7.5,
-        playerMax = 24,
         skippable = true
     },
     {
