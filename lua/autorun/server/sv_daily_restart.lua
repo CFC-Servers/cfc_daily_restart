@@ -24,38 +24,18 @@ local SOFT_RESTART_WINDOWS = { -- { X, Y } = At X hours since game start, a chan
         skippable = true
     },
     {
-        timeSinceStart = 4.5,
+        timeSinceStart = 5,
         playerMax = 4,
         skippable = true
     },
     {
-        timeSinceStart = 5,
-        playerMax = 8,
-        skippable = true
-    },
-    {
-        timeSinceStart = 5.5,
-        playerMax = 10,
-        skippable = true
-    },
-    {
         timeSinceStart = 6,
-        playerMax = 12,
-        skippable = true
-    },
-    {
-        timeSinceStart = 6.5,
-        playerMax = 14,
+        playerMax = 4,
         skippable = true
     },
     {
         timeSinceStart = 7,
-        playerMax = 20,
-        skippable = true
-    },
-    {
-        timeSinceStart = 7.5,
-        playerMax = 24,
+        playerMax = 8,
         skippable = true
     },
     {
@@ -449,8 +429,6 @@ local function getHoursUntilRestartHour()
     return hoursLeft
 end
 
-local SECONDS_IN_HOUR = 3600
-
 local function createRestartTimer( seconds )
     timer.Create( DAILY_RESTART_TIMER_NAME, seconds, 1, onHardAlertTimeout )
 end
@@ -493,7 +471,7 @@ local function waitForNextSoftRestartWindow()
             onSoftAlertTimeout()
         else
             currentSoftRestartWindow = currentSoftRestartWindow + 1
-            waitForNextSoftRestartWindow() 
+            waitForNextSoftRestartWindow()
         end
     end )
 end
