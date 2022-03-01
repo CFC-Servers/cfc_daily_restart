@@ -30,12 +30,12 @@ local SOFT_RESTART_WINDOWS = { -- { X, Y } = At X hours since game start, a chan
     },
     {
         timeSinceStart = 6,
-        playerMax = 4,
+        playerMax = 8,
         skippable = true
     },
     {
         timeSinceStart = 7,
-        playerMax = 8,
+        playerMax = 16,
         skippable = true
     },
     {
@@ -338,10 +338,9 @@ local function canRestartServer()
     if os.time() < EARLIEST_RESTART_TIME then return false end
     if allRestartAlertsGiven() then return true end
 
-    local playersInServer = player.GetHumans()
-    local serverIsEmpty = table.Count( playersInServer ) == 0
+    local playersInServer = #player.GetHumans()
 
-    return serverIsEmpty
+    return playersInServer == 0
 end
 
 local function canSoftRestartServer()
@@ -350,10 +349,9 @@ local function canSoftRestartServer()
     if timeSinceStart() < softRestartTime then return false end
     if allRestartAlertsGiven() then return true end
 
-    local playersInServer = player.GetHumans()
-    local serverIsEmpty = table.Count( playersInServer ) == 0
+    local playersInServer = #player.GetHumans()
 
-    return serverIsEmpty
+    return playersInServer == 0
 end
 
 local function getSecondsUntilAlertAndRestart()
