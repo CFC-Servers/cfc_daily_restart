@@ -4,7 +4,7 @@ util.AddNetworkString( "AlertUsersOfRestart" )
 CFCDailyRestart = CFCDailyRestart or {}
 
 local Restarter = CFCRestartLib()
-local DESIRED_RESTART_HOUR = 6 -- The hour to initiate a restart. Must be between 0-24
+local DESIRED_RESTART_HOUR = 6 -- The hour to initiate a restart. Must be between 0-23
 
 local DAILY_RESTART_TIMER_NAME = "CFC_DailyRestartTimer"
 local SOFT_RESTART_TIMER_NAME = "CFC_SoftRestartTimer"
@@ -441,9 +441,9 @@ local function getHoursUntilRestartHour()
     local currentHour = tonumber( os.date( "%H" ) )
 
     if currentHour < restartHour then
-      hoursLeft = restartHour - currentHour
+        hoursLeft = restartHour - currentHour
     elseif currentHour > restartHour then
-      hoursLeft = ( 24 - currentHour ) + restartHour
+        hoursLeft = ( 24 - currentHour ) + restartHour
     end
 
     return hoursLeft
@@ -484,7 +484,7 @@ local function waitForNextSoftRestartWindow()
     local timeUntilNextWindowAlert = window.timeSinceStart * SECONDS_IN_HOUR - timeSinceStart() - LARGEST_ALERT_INTERVAL
 
     if os.time() + timeUntilNextWindowAlert < EARLIEST_RESTART_TIME then return end -- Too early to restart
-    if RESTART_BUFFER > getHoursUntilRestartHour() * SECONDS_IN_HOUR then return end -- Hard restart is too close
+    if timeUntilNextWindowAlert + RESTART_BUFFER > getHoursUntilRestartHour() * SECONDS_IN_HOUR then return end -- Hard restart is too close
 
     timer.Create( SOFT_RESTART_TIMER_NAME, timeUntilNextWindowAlert, 1, function()
         if #player.GetHumans() <= window.playerMax then
