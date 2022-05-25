@@ -17,6 +17,12 @@ function cmd.tryStop( caller )
         return
     end
 
+    if not CFCDailyRestart.softRestartSkippable then
+        ULib.tsayError( caller, "This soft restart is unstoppable!", true )
+
+        return
+    end
+
     CFCDailyRestart.stopSoftRestart( caller, true )
     ulx.fancyLogAdmin( caller, "#A canceled the soft restart" )
 end
