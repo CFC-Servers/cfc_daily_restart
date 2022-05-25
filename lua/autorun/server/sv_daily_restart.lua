@@ -287,11 +287,6 @@ local function tryAlertNotification( secondsUntilNextRestart, msg, msgAdmin, noA
     end
 end
 
-local function handleFailedRestart( result )
-    if result then print( result ) end
-    -- TODO WEBHOOK
-end
-
 local function restartServer()
     if not TESTING_BOOLEAN then
         sendAlertToClients( "Restarting server!" )
