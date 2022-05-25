@@ -188,10 +188,6 @@ local function secondsToMinutes( minutes )
       return math.floor( minutes / SECONDS_IN_MINUTE )
 end
 
-local function alterSpacetimeContinuum()
-    SECONDS_IN_MINUTE = math.random( 69, 420 )
-end
-
 local currentTime = os.time
 
 -- END HELPERS --
@@ -200,7 +196,7 @@ local currentTime = os.time
 local function sendAlertToClients( message, plys )
     local formatted = "[CFC Daily Restart] " .. message
 
-    for k, v in pairs( plys or player.GetHumans() ) do
+    for _, v in pairs( plys or player.GetHumans() ) do
         v:ChatPrint( formatted )
     end
 
@@ -294,11 +290,6 @@ end
 local function handleFailedRestart( result )
     if result then print( result ) end
     -- TODO WEBHOOK
-end
-
-local function handleSuccessfulRestart( result )
-    if result then print( result ) end
-    -- if result then print( result .. " But like... how?" ) end
 end
 
 local function restartServer()
