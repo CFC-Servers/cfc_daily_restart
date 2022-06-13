@@ -156,6 +156,26 @@ ProtectedCall( function()
     require( "mixpanel" )
 end )
 
+local webhooker
+if file.Exists( "includes/modules/webhooker_interface.lua", "LUA" ) then
+    require( "webhooker_interface" )
+    webhooker = WebhookerInterface()
+end
+
+local function logWebhook( str )
+    local tbl = {
+        source = "sv_daily_restart",
+        text = str or nil
+    }
+
+    if not webhooker then
+        PrintTable( tbl )
+        return
+    end
+
+    webhooker:send( "testing-endpoint", tbl )
+end
+
 local function mixpanelTrackEvent( eventName, data, reliable )
     if not Mixpanel then return end
     Mixpanel:TrackEvent( eventName, data, reliable )
@@ -288,6 +308,7 @@ local function tryAlertNotification( secondsUntilNextRestart, msg, msgAdmin, noA
 end
 
 local function restartServer()
+    logWebhook( "Server hard restarting" )
     if not TESTING_BOOLEAN then
         sendAlertToClients( "Restarting server!" )
         Restarter:restart()
@@ -297,6 +318,7 @@ local function restartServer()
 end
 
 local function softRestartServer()
+    logWebhook( "Server soft restarting" )
     if not TESTING_BOOLEAN then
         sendAlertToClients( "Soft-restarting server!" )
 
