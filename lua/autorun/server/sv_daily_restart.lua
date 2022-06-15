@@ -165,7 +165,7 @@ end
 local function logWebhook( str )
     local tbl = {
         source = "sv_daily_restart",
-        text = str or nil
+        text = str
     }
 
     if not webhooker then
