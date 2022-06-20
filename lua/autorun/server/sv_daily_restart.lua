@@ -165,7 +165,13 @@ end
 local function logWebhook( str )
     local tbl = {
         source = "sv_daily_restart",
-        text = str
+        text = str,
+        AlertDeltas = AlertDeltas,
+        alertIntervalsInSeconds = alertIntervalsInSeconds,
+        EARLIEST_RESTART_TIME = EARLIEST_RESTART_TIME,
+        isOsTimeLarger = os.time() < EARLIEST_RESTART_TIME,
+        playersInServer = #player.GetHumans(),
+        allRestartAlertsGiven = table.Count( alertIntervalsInSeconds ) == 0
     }
 
     if not webhooker then
