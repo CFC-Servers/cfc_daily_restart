@@ -349,6 +349,7 @@ local function timeSinceStart()
 end
 
 local function canRestartServer()
+    if allRestartAlertsGiven() then return true end
     local playersInServer = #player.GetHumans()
 
     return playersInServer == 0
