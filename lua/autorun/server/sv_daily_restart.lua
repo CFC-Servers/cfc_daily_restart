@@ -349,18 +349,12 @@ local function timeSinceStart()
 end
 
 local function canRestartServer()
-    if os.time() < EARLIEST_RESTART_TIME then return false end
-    if allRestartAlertsGiven() then return true end
-
     local playersInServer = #player.GetHumans()
 
     return playersInServer == 0
 end
 
 local function canSoftRestartServer()
-    local softRestartTime = SOFT_RESTART_WINDOWS[currentSoftRestartWindow].timeSinceStart * SECONDS_IN_HOUR
-
-    if timeSinceStart() < softRestartTime then return false end
     if allRestartAlertsGiven() then return true end
 
     local playersInServer = #player.GetHumans()
@@ -386,6 +380,7 @@ local function formatAlertMessage( msg, secondsUntilNextRestart )
 end
 
 local function onHardAlertTimeout()
+    if os.time() < EARLIEST_RESTART_TIME then return end
     if canRestartServer() then return restartServer() end
 
     local secondsUntilNextAlert, secondsUntilNextRestart = getSecondsUntilAlertAndRestart()
@@ -401,6 +396,9 @@ local function onHardAlertTimeout()
 end
 
 local function onSoftAlertTimeout()
+    local softRestartTime = SOFT_RESTART_WINDOWS[currentSoftRestartWindow].timeSinceStart * SECONDS_IN_HOUR
+    if timeSinceStart() < softRestartTime then return end
+
     if canSoftRestartServer() then return softRestartServer() end
 
     local secondsUntilNextAlert, secondsUntilNextRestart = getSecondsUntilAlertAndRestart()
