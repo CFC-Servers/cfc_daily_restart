@@ -35,7 +35,7 @@ local SOFT_RESTART_WINDOWS = { -- { X, Y } = At X hours since game start, a chan
     },
     {
         timeSinceStart = 7,
-        playerMax = 14,
+        playerMax = 8,
         skippable = true
     },
     {
