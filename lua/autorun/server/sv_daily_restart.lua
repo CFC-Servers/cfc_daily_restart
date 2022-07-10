@@ -17,29 +17,39 @@ local TESTING_BOOLEAN = false
 local SOFT_RESTART_STOP_COMMAND = "!stoprestart"
 local MINIMUM_HOURS_BEFORE_RESTART = 3
 local RESTART_BUFFER = 5 -- Will only trigger a soft restart if it isn't scheduled to be within this many hours of the hard restart
-local SOFT_RESTART_WINDOWS = { -- { X, Y } = At X hours since game start, a changelevel will occur if there are no more than Y players
+local SOFT_RESTART_WINDOWS = { -- { X, Y } = At X hours since game start, a changelevel will be blocked if there are at least Y-many players (i.e. lower numbers are less likely to succeed)
     {
         timeSinceStart = 4,
-        playerMax = 4,
+        playerMax = 2,
         skippable = true
     },
     {
         timeSinceStart = 5,
-        playerMax = 4,
+        playerMax = 2,
         skippable = true
     },
     {
         timeSinceStart = 6,
-        playerMax = 8,
+        playerMax = 6,
         skippable = true
     },
     {
         timeSinceStart = 7,
-        playerMax = 16,
+        playerMax = 14,
         skippable = true
     },
     {
         timeSinceStart = 8,
+        playerMax = 16,
+        skippable = true
+    },
+    {
+        timeSinceStart = 9,
+        playerMax = 16,
+        skippable = true
+    },
+    {
+        timeSinceStart = 10,
         playerMax = 10000,
         skippable = false
     },
@@ -60,8 +70,6 @@ RESTART_BUFFER = RESTART_BUFFER * SECONDS_IN_HOUR
 -- HELPERS --
 
 local BASE_ALERT_INTERVALS_IN_SECONDS = {
-    1800, -- 30 minutes
-    900,  -- 15 minutes
     600,  -- 10 minutes
     540,  -- 9 minutes
     480,  -- 8 minutes
@@ -90,14 +98,6 @@ local ALERT_NOTIFICATION_COLOR = Color( 255, 255, 255, 255 )
 local ALERT_NOTIFICATION_DISCARD_COLOR = Color( 230, 153, 58, 255 )
 local ALERT_NOTIFICATION_STOP_COLOR = Color( 41, 183, 185, 255 )
 local ALERT_INTERVALS_IMPORTANT = { -- { X, Y } = Alerts at time X will be accompanied by a CFC Notification which displays for Y seconds
-    {
-        1800, -- 30 minutes
-        10
-    },
-    {
-        900,  -- 15 minutes
-        10
-    },
     {
         600,  -- 10 minutes
         10
