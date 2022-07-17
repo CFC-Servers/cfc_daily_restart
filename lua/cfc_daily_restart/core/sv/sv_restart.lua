@@ -591,7 +591,7 @@ hook.Add( "PlayerSay", "CFC_DailyRestart_StopSoftRestart", function( ply, msg )
 end )
 
 hook.Add( "PlayerFullLoad", "CFC_SendLateHUDElement", function( ply )
-    if secsLeft <= 10 then
+    if secsLeft <= 5 then
         net.Start( "RestartCreateHUDElement" )
             net.SendFloat( timeToRestart )
         net.Send( ply )
