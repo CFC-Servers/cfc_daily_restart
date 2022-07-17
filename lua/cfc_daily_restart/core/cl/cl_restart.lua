@@ -9,18 +9,18 @@ local function destroyHUDElement()
     hudElement:Destroy()
 end
 
-net.Receive( "AlertUsersOfRestart", function( len )
+net.Receive( "AlertUsersOfRestart", function()
     local restartTime = net.ReadFloat()
 
     createHUDElement( restartTime )
 end )
 
-net.Receive( "RestartCreateHUDElement", function( len )
+net.Receive( "RestartCreateHUDElement", function()
     local restartTime = net.ReadFloat()
 
     createHUDElement( restartTime )
 end )
 
-net.Receive( "RestartDestroyHUDElement", function( len )
+net.Receive( "RestartDestroyHUDElement", function()
     destroyHUDElement()
 end )
