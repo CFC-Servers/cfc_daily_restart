@@ -1,5 +1,7 @@
 require( "cfc_restart_lib" )
 util.AddNetworkString( "AlertUsersOfRestart" )
+util.AddNetworkString( "RestartCreateHUDElement" )
+util.AddNetworkString( "RestartDestroyHUDElement" )
 
 local Restarter = CFCRestartLib()
 local DESIRED_RESTART_HOUR = 6 -- The hour to initiate a restart. Must be between 0-23
@@ -150,6 +152,9 @@ CFCDailyRestart.softRestartImminent = false
 CFCDailyRestart.softRestartSkippable = true
 CFCDailyRestart.numSoftStops = CFCDailyRestart.numSoftStops or 0
 
+local timeToRestart, secsLeft
+local alertedOfRestart = false
+
 ProtectedCall( function()
     require( "mixpanel" )
 end )
@@ -158,6 +163,12 @@ local webhooker
 if file.Exists( "includes/modules/webhooker_interface.lua", "LUA" ) then
     require( "webhooker_interface" )
     webhooker = WebhookerInterface()
+end
+
+local function sendRestartTimeToClients( timeOfRestart )
+    net.Start( "AlertUsersOfRestart" )
+        net.WriteFloat( timeOfRestart )
+    net.Broadcast()
 end
 
 local function logWebhook( str )
@@ -218,6 +229,10 @@ local currentTime = os.time
 
 
 local function sendAlertToClients( message, plys )
+    if not alertedOfRestart then
+        sendRestartTimeToClients( timeToRestart )
+        alertedOfRestart = true
+    end
     local formatted = "[CFC Daily Restart] " .. message
 
     for _, v in pairs( plys or player.GetHumans() ) do
@@ -257,12 +272,6 @@ local function splitPlayersBySoftRestartStopAccess()
     end
 
     return noAccess, hasAccess
-end
-
-local function sendRestartTimeToClients( timeOfRestart )
-    net.Start( "AlertUsersOfRestart" )
-        net.WriteFloat( timeOfRestart )
-    net.Broadcast()
 end
 
 local function newAlertNotification( notifID, msg, duration )
@@ -387,6 +396,8 @@ local function onHardAlertTimeout()
     local secondsUntilNextAlert, secondsUntilNextRestart = getSecondsUntilAlertAndRestart()
     if secondsUntilNextAlert == nil or secondsUntilNextRestart == nil then return restartServer() end
 
+    secsLeft = secondsUntilNextRestart
+
     local msg = formatAlertMessage( "Restarting server in ", secondsUntilNextRestart )
     local notifMsg = msg .. "\nThis is a hard restart!\nThe server takes at most 3 minutes to come back online."
 
@@ -456,7 +467,7 @@ local function waitUntilRestartHour()
 
     local secondsToWait = ( hoursLeft * SECONDS_IN_HOUR ) - secondsAndMinutes
 
-    local timeToRestart = currentTime() + secondsToWait
+    timeToRestart = currentTime() + secondsToWait
     sendRestartTimeToClients( timeToRestart )
 
     createRestartTimer( secondsToWait )
@@ -506,6 +517,11 @@ DAILY_RESTART_TESTS.renew = function()
     test_waitUntilRestartHour()
 end
 
+local function destroyHUDElement()
+    net.Start( "RestartDestroyHUDElement" )
+    net.Broadcast()
+end
+
 function CFCDailyRestart.stopSoftRestart( ply, hidePrint )
     CFCDailyRestart.softRestartImminent = false
     timer.Remove( SOFT_RESTART_TIMER_NAME )
@@ -539,6 +555,9 @@ function CFCDailyRestart.stopSoftRestart( ply, hidePrint )
         mixpanelTrackEvent( "Soft restart stopped", mixPanelData )
     end
 
+    alertedOfRestart = false
+    destroyHUDElement()
+
     if hidePrint then return end
 
     sendAlertToClients( "The soft restart has been canceled." )
@@ -569,4 +588,12 @@ hook.Add( "PlayerSay", "CFC_DailyRestart_StopSoftRestart", function( ply, msg )
     end
 
     CFCDailyRestart.stopSoftRestart( ply )
+end )
+
+hook.Add( "PlayerFullLoad", "CFC_SendLateHUDElement", function( ply )
+    if secsLeft <= 10 then
+        net.Start( "RestartCreateHUDElement" )
+            net.SendFloat( timeToRestart )
+        net.Send( ply )
+    end
 end )
