@@ -209,7 +209,7 @@ end
 
 local SECONDS_IN_MINUTE = 60
 local function secondsToMinutes( minutes )
-      return math.floor( minutes / SECONDS_IN_MINUTE )
+    return math.floor( minutes / SECONDS_IN_MINUTE )
 end
 
 local currentTime = os.time
