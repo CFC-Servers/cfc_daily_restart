@@ -445,9 +445,9 @@ end
 
 -- Calculates up to 23:59:59 to wait until restart
 local function waitUntilRestartHour()
-    local currentMinuteAndSecond = string.Split( os.date( "!%M %S" ), " " )
-    local currentMinute = tonumber( currentMinuteAndSecond[1] )
-    local currentSecond = tonumber( currentMinuteAndSecond[2] )
+    local timeTbl = os.date( "!*t" )
+    local currentMinute = timeTbl.min
+    local currentSecond =  timeTbl.sec
 
     local hoursLeft = getHoursUntilRestartHour()
 
