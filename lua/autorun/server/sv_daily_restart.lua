@@ -4,7 +4,7 @@ util.AddNetworkString( "AlertUsersOfRestart" )
 CFCDailyRestart = CFCDailyRestart or {}
 
 local Restarter = CFCRestartLib()
-local DESIRED_RESTART_HOUR = 6 -- The hour to initiate a restart. Must be between 0-23
+local DESIRED_RESTART_HOUR = 11 -- The hour to initiate a restart, in UTC time. Must be between 0-23
 
 local DAILY_RESTART_TIMER_NAME = "CFC_DailyRestartTimer"
 local SOFT_RESTART_TIMER_NAME = "CFC_SoftRestartTimer"
@@ -428,7 +428,7 @@ end
 local function getHoursUntilRestartHour()
     local hoursLeft = 24
     local restartHour = DESIRED_RESTART_HOUR
-    local currentHour = tonumber( os.date( "%H" ) )
+    local currentHour = tonumber( os.date( "!%H" ) )
 
     if currentHour < restartHour then
         hoursLeft = restartHour - currentHour
@@ -445,8 +445,8 @@ end
 
 -- Calculates up to 23:59:59 to wait until restart
 local function waitUntilRestartHour()
-    local currentMinute = tonumber( os.date( "%M" ) )
-    local currentSecond = tonumber( os.date( "%S" ) )
+    local currentMinute = tonumber( os.date( "!%M" ) )
+    local currentSecond = tonumber( os.date( "!%S" ) )
 
     local hoursLeft = getHoursUntilRestartHour()
 
