@@ -15,6 +15,7 @@ local ALERT_NOTIFICATION_ADMIN_NAME = "CFC_DailyRestartAlertAdmin"
 local TESTING_BOOLEAN = false
 
 local SOFT_RESTART_STOP_COMMAND = "!stoprestart"
+local SOFT_RESTART_USE_RTV = true
 local MINIMUM_HOURS_BEFORE_RESTART = 1 -- Hard restarts will wait until this many hours after map startup before they begin their alert and restart process.
 local RESTART_BUFFER = 5 -- Will only trigger a soft restart if it isn't scheduled to be within this many hours of the hard restart
 local SOFT_RESTART_WINDOWS = { -- { X, Y } = At X hours since game start, a changelevel will be blocked if there are at least Y-many players (i.e. lower numbers are less likely to succeed)
@@ -331,7 +332,19 @@ local function softRestartServer()
 
         hook.Run( "CFC_DailyRestart_SoftRestart" )
 
-        game.ConsoleCommand( "changelevel " .. game.GetMap() ..  "\n" )
+        -- Try to start an rtv instead of keeping the same map
+        if SOFT_RESTART_USE_RTV and MapVote and MapVote.state and not MapVote.state.isInProgres then
+            local voteDuration = 120
+
+            MapVote.Start( voteDuration )
+
+            -- In case the map vote is canceled for some reason.
+            timer.Create( SOFT_RESTART_TIMER_NAME, voteDuration + 20, 1, function()
+                game.ConsoleCommand( "changelevel " .. game.GetMap() ..  "\n" )
+            end )
+        else
+            game.ConsoleCommand( "changelevel " .. game.GetMap() ..  "\n" )
+        end
     else
         sendAlertToClients( "Soft-restarting server ( not really, this is a test )!" )
     end
