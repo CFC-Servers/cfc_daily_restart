@@ -148,6 +148,7 @@ end
 local AlertDeltas = {}
 local alertIntervalsInSeconds = {}
 local currentSoftRestartWindow = 1
+local tryingToHardRestart = false
 CFCDailyRestart.softRestartImminent = false
 CFCDailyRestart.softRestartSkippable = true
 CFCDailyRestart.numSoftStops = CFCDailyRestart.numSoftStops or 0
@@ -383,6 +384,8 @@ local function formatAlertMessage( msg, secondsUntilNextRestart )
 end
 
 local function onHardAlertTimeout()
+    tryingToHardRestart = true
+
     if os.time() < EARLIEST_RESTART_TIME then
         -- If it's too early, then retry at the earliest possible time.
         timer.Create( DAILY_RESTART_TIMER_NAME, EARLIEST_RESTART_TIME - os.time() + 1, 1, onHardAlertTimeout )
@@ -552,6 +555,11 @@ function CFCDailyRestart.stopSoftRestart( ply, hidePrint )
 
     sendAlertToClients( "The soft restart has been canceled." )
 end
+
+
+hook.Add( "MapVote_RTVStart", "CFC_DailyRestart_PreventNearHardRestarts", function()
+    if tryingToHardRestart then return false end
+end )
 
 if ULib then return end
 
