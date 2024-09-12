@@ -405,6 +405,7 @@ local function onHardAlertTimeout()
     tryAlertNotification( secondsUntilNextRestart, notifMsg )
 
     timer.Adjust( DAILY_RESTART_TIMER_NAME, secondsUntilNextAlert, 1, onHardAlertTimeout )
+    timer.Remove( SOFT_RESTART_TIMER_NAME ) -- Just in case
 end
 
 local function onSoftAlertTimeout()
