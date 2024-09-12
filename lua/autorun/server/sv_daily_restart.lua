@@ -383,7 +383,13 @@ local function formatAlertMessage( msg, secondsUntilNextRestart )
 end
 
 local function onHardAlertTimeout()
-    if os.time() < EARLIEST_RESTART_TIME then return end
+    if os.time() < EARLIEST_RESTART_TIME then
+        -- If it's too early, then retry at the earliest possible time.
+        timer.Create( DAILY_RESTART_TIMER_NAME, EARLIEST_RESTART_TIME - os.time() + 1, 1, onHardAlertTimeout )
+
+        return
+    end
+
     if canRestartServer() then return restartServer() end
 
     local secondsUntilNextAlert, secondsUntilNextRestart = getSecondsUntilAlertAndRestart()
