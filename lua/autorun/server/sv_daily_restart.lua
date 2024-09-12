@@ -383,10 +383,10 @@ local function formatAlertMessage( msg, secondsUntilNextRestart )
     return msg .. "!"
 end
 
-local function onHardAlertTimeout()
+local function onHardAlertTimeout( forced )
     tryingToHardRestart = true
 
-    if os.time() < EARLIEST_RESTART_TIME then
+    if not forced and os.time() < EARLIEST_RESTART_TIME then
         -- If it's too early, then retry at the earliest possible time.
         timer.Create( DAILY_RESTART_TIMER_NAME, EARLIEST_RESTART_TIME - os.time() + 1, 1, onHardAlertTimeout )
 
@@ -556,6 +556,23 @@ function CFCDailyRestart.stopSoftRestart( ply, hidePrint )
 
     sendAlertToClients( "The soft restart has been canceled." )
 end
+
+
+local forcedHardRestartWithConcmd = false
+
+concommand.Add( "cfc_daily_restart_force_hard_restart", function( ply )
+    if IsValid( ply ) then return end -- Server console only.
+
+    if forcedHardRestartWithConcmd then
+        print( "The hard restart is already imminent!" )
+
+        return
+    end
+
+    forcedHardRestartWithConcmd = true
+
+    timer.Create( DAILY_RESTART_TIMER_NAME, 0, 1, onHardAlertTimeout )
+end )
 
 
 hook.Add( "MapVote_RTVStart", "CFC_DailyRestart_PreventNearHardRestarts", function()
