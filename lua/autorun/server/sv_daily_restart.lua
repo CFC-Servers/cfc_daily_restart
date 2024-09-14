@@ -589,7 +589,11 @@ end )
 
 
 hook.Add( "MapVote_RTVStart", "CFC_DailyRestart_PreventNearHardRestarts", function()
-    if tryingToHardRestart then return false end
+    if not tryingToHardRestart then return end
+
+    PrintMessage( HUD_PRINTTALK, "RTV blocked by imminent hard restart!" )
+
+    return false
 end )
 
 if ULib then return end
