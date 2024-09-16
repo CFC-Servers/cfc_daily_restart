@@ -3,7 +3,6 @@ util.AddNetworkString( "AlertUsersOfRestart" )
 
 CFCDailyRestart = CFCDailyRestart or {}
 
-local Restarter = CFCRestartLib()
 local DESIRED_RESTART_HOUR = 11 -- The hour to initiate a restart, in UTC time. Must be between 0-23
 
 local DAILY_RESTART_TIMER_NAME = "CFC_DailyRestartTimer"
@@ -319,7 +318,7 @@ local function restartServer()
     logWebhook( "Server hard restarting" )
     if not TESTING_BOOLEAN then
         sendAlertToClients( "Restarting server!" )
-        Restarter:restart()
+        CFCNanny.Restart()
     else
         sendAlertToClients( "Restarting server ( not really, this is a test )!" )
     end
