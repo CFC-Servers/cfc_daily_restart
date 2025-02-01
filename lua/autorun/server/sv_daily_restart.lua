@@ -336,6 +336,10 @@ local function softRestartServer()
         if SOFT_RESTART_USE_RTV and MapVote and MapVote.state and not MapVote.state.isInProgres then
             local voteDuration = 120
 
+            hook.Add( "MapVote_IsMapAllowed", "CFC_DailyRestart_SameMap", function( m )
+                if game.GetMap():lower() == m then return true end
+            end )
+
             MapVote.Start( voteDuration )
 
             -- In case the map vote is canceled for some reason.
