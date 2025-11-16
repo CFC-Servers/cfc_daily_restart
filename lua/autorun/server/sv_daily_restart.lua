@@ -319,10 +319,7 @@ local function restartServer()
     logWebhook( "Server hard restarting" )
     if not TESTING_BOOLEAN then
         sendAlertToClients( "Restarting server!" )
-        if physgunutilsv3_crashscreenshutdown then 
-            physgunutilsv3_crashscreenshutdown()
-        end
-        -- Restarter:restart()
+        Restarter:restart()
     else
         sendAlertToClients( "Restarting server ( not really, this is a test )!" )
     end
