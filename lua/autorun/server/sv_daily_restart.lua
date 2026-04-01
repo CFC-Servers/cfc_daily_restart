@@ -169,17 +169,18 @@ if file.Exists( "includes/modules/webhooker_interface.lua", "LUA" ) then
     webhooker = WebhookerInterface()
 end
 
-local function logWebhook( str )
-    local tbl = {
-        source = "sv_daily_restart",
-        text = str,
-        AlertDeltas = AlertDeltas,
-        alertIntervalsInSeconds = alertIntervalsInSeconds,
-        EARLIEST_RESTART_TIME = EARLIEST_RESTART_TIME,
-        isOsTimeLarger = os.time() < EARLIEST_RESTART_TIME,
-        playersInServer = #player.GetHumans(),
-        allRestartAlertsGiven = table.Count( alertIntervalsInSeconds ) == 0
-    }
+local function logWebhookGeneric( info, isGood )
+    local tbl = table.Copy( info )
+    local diffChar = "|"
+
+    if isGood == true then
+        diffChar = "+"
+    elseif isGood == false then
+        diffChar = "-"
+    end
+
+    tbl.source = "sv_daily_restart"
+    tbl.webhookDescription = "```diff\n" .. diffChar .. " Daily Restart " .. diffChar .. "```"
 
     if not webhooker then
         PrintTable( tbl )
@@ -187,6 +188,18 @@ local function logWebhook( str )
     end
 
     webhooker:send( "testing-endpoint", tbl )
+end
+
+local function logWebhookRestart( str )
+    logWebhookGeneric( {
+        text = str,
+        AlertDeltas = AlertDeltas,
+        alertIntervalsInSeconds = alertIntervalsInSeconds,
+        EARLIEST_RESTART_TIME = EARLIEST_RESTART_TIME,
+        isOsTimeLarger = os.time() < EARLIEST_RESTART_TIME,
+        playersInServer = #player.GetHumans(),
+        allRestartAlertsGiven = table.Count( alertIntervalsInSeconds ) == 0
+    } )
 end
 
 local function mixpanelTrackEvent( eventName, data, reliable )
@@ -324,10 +337,14 @@ local function restartServer()
     timer.Create( "CFC_DailyRestart_RestartFailed", 60, 1, function()
         tryingToHardRestart = false -- Unbreak rtv.
 
+        logWebhookGeneric( {
+            text = "Hard restart failed!",
+        }, false )
+
         -- TODO: Fallback restart method?
     end )
 
-    logWebhook( "Server hard restarting" )
+    logWebhookRestart( "Server hard restarting" )
     if not TESTING_BOOLEAN then
         sendAlertToClients( "Restarting server!" )
         Restarter:restart()
@@ -337,7 +354,7 @@ local function restartServer()
 end
 
 local function softRestartServer()
-    logWebhook( "Server soft restarting" )
+    logWebhookRestart( "Server soft restarting" )
     if not TESTING_BOOLEAN then
         sendAlertToClients( "Soft-restarting server!" )
 
