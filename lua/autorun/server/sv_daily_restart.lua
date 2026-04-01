@@ -6,6 +6,10 @@ CFCDailyRestart = CFCDailyRestart or {}
 local Restarter = CFCRestartLib()
 local DESIRED_RESTART_HOUR = 11 -- The hour to initiate a restart, in UTC time. Must be between 0-23
 
+local RESTART_REDUNDANCY_SCHEDULE_HOURS = 2 -- If the scheduled hard restart is within this many hours, and...
+local RESTART_REDUNDANCY_STARTUP_HOURS = 3 -- ... if the server has hard-restarted within this many hours, then...
+-- ... skip the restart since it effectively already happened today.
+
 local DAILY_RESTART_TIMER_NAME = "CFC_DailyRestartTimer"
 local SOFT_RESTART_TIMER_NAME = "CFC_SoftRestartTimer"
 local ALERT_NOTIFICATION_NAME = "CFC_DailyRestartAlert"
@@ -461,6 +465,16 @@ local function getHoursUntilRestartHour()
         hoursLeft = restartHour - currentHour
     elseif currentHour > restartHour then
         hoursLeft = ( 24 - currentHour ) + restartHour
+    end
+
+    -- Anti-reduncancy check.
+    if hoursLeft <= RESTART_REDUNDANCY_SCHEDULE_HOURS then
+        local timeSinceLastHardRestart = os.time() - SysTime()
+
+        -- If the server hard-restarted recently, there's no need to do the scheduled one today.
+        if timeSinceLastHardRestart < RESTART_REDUNDANCY_STARTUP_HOURS * SECONDS_IN_HOUR then
+            hoursLeft = hoursLeft + 24
+        end
     end
 
     return hoursLeft
