@@ -321,6 +321,12 @@ local function tryAlertNotification( secondsUntilNextRestart, msg, msgAdmin, noA
 end
 
 local function restartServer()
+    timer.Create( "CFC_DailyRestart_RestartFailed", 60, 1, function()
+        tryingToHardRestart = false -- Unbreak rtv.
+
+        -- TODO: Fallback restart method?
+    end )
+
     logWebhook( "Server hard restarting" )
     if not TESTING_BOOLEAN then
         sendAlertToClients( "Restarting server!" )
