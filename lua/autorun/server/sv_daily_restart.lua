@@ -6,7 +6,7 @@ CFCDailyRestart = CFCDailyRestart or {}
 local Restarter = CFCRestartLib()
 local DESIRED_RESTART_HOUR = 11 -- The hour to initiate a restart, in UTC time. Must be between 0-23
 
-local RESTART_REDUNDANCY_SCHEDULE_HOURS = 2 -- If the scheduled hard restart is within this many hours, and...
+local RESTART_REDUNDANCY_SCHEDULE_HOURS = 2 -- From map startup, if the scheduled hard restart is within this many hours, and...
 local RESTART_REDUNDANCY_STARTUP_HOURS = 3 -- ... if the server has hard-restarted within this many hours, then...
 -- ... skip the restart since it effectively already happened today.
 
@@ -154,6 +154,7 @@ local AlertDeltas = {}
 local alertIntervalsInSeconds = {}
 local currentSoftRestartWindow = 1
 local tryingToHardRestart = false
+local restartIsRedundant = nil
 CFCDailyRestart.softRestartImminent = false
 CFCDailyRestart.softRestartSkippable = true
 CFCDailyRestart.numSoftStops = CFCDailyRestart.numSoftStops or 0
@@ -456,6 +457,26 @@ local function onSoftAlertTimeout()
     timer.Create( SOFT_RESTART_TIMER_NAME, secondsUntilNextAlert, 1, onSoftAlertTimeout )
 end
 
+-- Caches the result on first call, since there is a sweet spot where it could initially be false, then later true as time passes.
+-- The hard restart timer is made on startup, so the cache ensures everything stays consistent with that first check.
+local function doRestartRedundancyCheck( hoursLeft )
+    if restartIsRedundant ~= nil then return restartIsRedundant end
+
+    restartIsRedundant = false
+
+    -- If the scheduled restart is soon...
+    if hoursLeft > RESTART_REDUNDANCY_SCHEDULE_HOURS then
+        local timeSinceLastHardRestart = os.time() - SysTime()
+
+        -- If the server hard-restarted recently, there's no need to do the scheduled one today.
+        if timeSinceLastHardRestart < RESTART_REDUNDANCY_STARTUP_HOURS * SECONDS_IN_HOUR then
+            restartIsRedundant = true
+        end
+    end
+
+    return restartIsRedundant
+end
+
 local function getHoursUntilRestartHour()
     local hoursLeft = 24
     local restartHour = DESIRED_RESTART_HOUR
@@ -467,14 +488,8 @@ local function getHoursUntilRestartHour()
         hoursLeft = ( 24 - currentHour ) + restartHour
     end
 
-    -- Anti-reduncancy check.
-    if hoursLeft <= RESTART_REDUNDANCY_SCHEDULE_HOURS then
-        local timeSinceLastHardRestart = os.time() - SysTime()
-
-        -- If the server hard-restarted recently, there's no need to do the scheduled one today.
-        if timeSinceLastHardRestart < RESTART_REDUNDANCY_STARTUP_HOURS * SECONDS_IN_HOUR then
-            hoursLeft = hoursLeft + 24
-        end
+    if doRestartRedundancyCheck( hoursLeft ) then
+        hoursLeft = hoursLeft + 24
     end
 
     return hoursLeft
