@@ -475,16 +475,13 @@ local function waitUntilRestartHour()
     local timeTbl = os.date( "!*t" )
     local currentMinute = timeTbl.min
     local currentSecond =  timeTbl.sec
-
     local hoursLeft = getHoursUntilRestartHour()
 
-    local secondsOffset = 60 - currentSecond
-    local minutesOffset = 60 - currentMinute - 1
+    -- How far we are into the current hour
+    local secondsSpentInCurrentHour = currentMinute * 60 + currentSecond
 
-    -- We are this many seconds into the hour
-    local secondsAndMinutes = secondsOffset + ( minutesOffset * 60 )
-
-    local secondsToWait = ( hoursLeft * SECONDS_IN_HOUR ) - secondsAndMinutes
+    -- hoursLeft rounds up, so we need to take out the amount of time spent in the current hour
+    local secondsToWait = ( hoursLeft * SECONDS_IN_HOUR ) - secondsSpentInCurrentHour
 
     local timeToRestart = currentTime() + secondsToWait
     sendRestartTimeToClients( timeToRestart )
