@@ -1,5 +1,4 @@
 require( "cfc_restart_lib" )
-util.AddNetworkString( "AlertUsersOfRestart" )
 
 CFCDailyRestart = CFCDailyRestart or {}
 
@@ -240,8 +239,6 @@ local function secondsToMinutes( minutes )
       return math.floor( minutes / SECONDS_IN_MINUTE )
 end
 
-local currentTime = os.time
-
 -- END HELPERS --
 
 
@@ -285,12 +282,6 @@ local function splitPlayersBySoftRestartStopAccess()
     end
 
     return noAccess, hasAccess
-end
-
-local function sendRestartTimeToClients( timeOfRestart )
-    net.Start( "AlertUsersOfRestart" )
-        net.WriteFloat( timeOfRestart )
-    net.Broadcast()
 end
 
 local function newAlertNotification( notifID, msg, duration )
@@ -555,9 +546,6 @@ local function waitUntilRestartHour()
 
     -- hoursLeft rounds up, so we need to take out the amount of time spent in the current hour
     local secondsToWait = ( hoursLeft * SECONDS_IN_HOUR ) - secondsSpentInCurrentHour
-
-    local timeToRestart = currentTime() + secondsToWait
-    sendRestartTimeToClients( timeToRestart )
 
     createRestartTimer( secondsToWait )
 end
