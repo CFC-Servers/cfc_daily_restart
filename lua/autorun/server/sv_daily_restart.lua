@@ -187,7 +187,9 @@ local function logWebhookGeneric( info, isGood )
         return
     end
 
-    webhooker:send( "testing-endpoint", tbl )
+    ProtectedCall( function()
+        webhooker:send( "testing-endpoint", tbl )
+    end )
 end
 
 local function logWebhookRestart( str )
