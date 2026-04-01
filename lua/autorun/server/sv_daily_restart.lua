@@ -10,6 +10,9 @@ local RESTART_REDUNDANCY_SCHEDULE_HOURS = 2 -- From map startup, if the schedule
 local RESTART_REDUNDANCY_STARTUP_HOURS = 3 -- ... if the server has hard-restarted within this many hours, then...
 -- ... skip the restart since it effectively already happened today.
 
+local RESTART_RETRY_ATTEMPS = 5 -- How many times to retry if the hard restart library fails.
+local RESTART_RETRY_INTERVAL = 60 -- Seconds between hard restart retries.
+
 local DAILY_RESTART_TIMER_NAME = "CFC_DailyRestartTimer"
 local SOFT_RESTART_TIMER_NAME = "CFC_SoftRestartTimer"
 local ALERT_NOTIFICATION_NAME = "CFC_DailyRestartAlert"
@@ -155,6 +158,7 @@ local alertIntervalsInSeconds = {}
 local currentSoftRestartWindow = 1
 local tryingToHardRestart = false
 local restartIsRedundant = nil
+local restartAttemptsLeft = RESTART_RETRY_ATTEMPS
 CFCDailyRestart.softRestartImminent = false
 CFCDailyRestart.softRestartSkippable = true
 CFCDailyRestart.numSoftStops = CFCDailyRestart.numSoftStops or 0
@@ -335,24 +339,39 @@ local function tryAlertNotification( secondsUntilNextRestart, msg, msgAdmin, noA
     end
 end
 
+local function _restartServer()
+    ProtectedCall( function()
+        Restarter:restart()
+    end )
+end
+
 local function restartServer()
-    timer.Create( "CFC_DailyRestart_RestartFailed", 60, 1, function()
+    logWebhookRestart( "Server hard restarting" )
+
+    if TESTING_BOOLEAN then
+        sendAlertToClients( "Restarting server ( not really, this is a test )!" )
+        return
+    end
+
+    timer.Create( "CFC_DailyRestart_RetryRestart", RESTART_RETRY_INTERVAL, 0, function()
+        if restartAttemptsLeft > 0 then -- Retry.
+            restartAttemptsLeft = restartAttemptsLeft - 1
+            _restartServer()
+
+            return
+        end
+
         tryingToHardRestart = false -- Unbreak rtv.
 
         logWebhookGeneric( {
             text = "Hard restart failed!",
         }, false )
 
-        -- TODO: Fallback restart method?
+        timer.Remove( "CFC_DailyRestart_RetryRestart" )
     end )
 
-    logWebhookRestart( "Server hard restarting" )
-    if not TESTING_BOOLEAN then
-        sendAlertToClients( "Restarting server!" )
-        Restarter:restart()
-    else
-        sendAlertToClients( "Restarting server ( not really, this is a test )!" )
-    end
+    sendAlertToClients( "Restarting server!" )
+    _restartServer()
 end
 
 local function softRestartServer()
