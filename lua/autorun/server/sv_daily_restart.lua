@@ -6,7 +6,7 @@ local Restarter = CFCRestartLib()
 local DESIRED_RESTART_HOUR = 11 -- The hour to initiate a restart, in UTC time. Must be between 0-23
 local ACCEPTABLE_HOURS_BETWEEN_RESTARTS = 3 -- If the scheduled hard restart is within this many hours of the last hard restart, skip it.
 
-local RESTART_RETRY_ATTEMPS = 5 -- How many times to retry if the hard restart library fails.
+local RESTART_RETRY_ATTEMPTS = 5 -- How many times to retry if the hard restart library fails.
 local RESTART_RETRY_INTERVAL = 60 -- Seconds between hard restart retries.
 
 local DAILY_RESTART_TIMER_NAME = "CFC_DailyRestartTimer"
@@ -153,7 +153,7 @@ local AlertDeltas = {}
 local alertIntervalsInSeconds = {}
 local currentSoftRestartWindow = 1
 local tryingToHardRestart = false
-local restartAttemptsLeft = RESTART_RETRY_ATTEMPS
+local restartAttemptsLeft = RESTART_RETRY_ATTEMPTS
 CFCDailyRestart.softRestartImminent = false
 CFCDailyRestart.softRestartSkippable = true
 CFCDailyRestart.numSoftStops = CFCDailyRestart.numSoftStops or 0
