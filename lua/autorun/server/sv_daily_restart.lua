@@ -1,10 +1,13 @@
 require( "cfc_restart_lib" )
-util.AddNetworkString( "AlertUsersOfRestart" )
 
 CFCDailyRestart = CFCDailyRestart or {}
 
 local Restarter = CFCRestartLib()
 local DESIRED_RESTART_HOUR = 11 -- The hour to initiate a restart, in UTC time. Must be between 0-23
+local ACCEPTABLE_HOURS_BETWEEN_RESTARTS = 3 -- If the scheduled hard restart is within this many hours of the last hard restart, skip it.
+
+local RESTART_RETRY_ATTEMPTS = 5 -- How many times to retry if the hard restart library fails.
+local RESTART_RETRY_INTERVAL = 60 -- Seconds between hard restart retries.
 
 local DAILY_RESTART_TIMER_NAME = "CFC_DailyRestartTimer"
 local SOFT_RESTART_TIMER_NAME = "CFC_SoftRestartTimer"
@@ -150,6 +153,7 @@ local AlertDeltas = {}
 local alertIntervalsInSeconds = {}
 local currentSoftRestartWindow = 1
 local tryingToHardRestart = false
+local restartAttemptsLeft = RESTART_RETRY_ATTEMPTS
 CFCDailyRestart.softRestartImminent = false
 CFCDailyRestart.softRestartSkippable = true
 CFCDailyRestart.numSoftStops = CFCDailyRestart.numSoftStops or 0
@@ -164,9 +168,31 @@ if file.Exists( "includes/modules/webhooker_interface.lua", "LUA" ) then
     webhooker = WebhookerInterface()
 end
 
-local function logWebhook( str )
-    local tbl = {
-        source = "sv_daily_restart",
+local function logWebhookGeneric( info, isGood )
+    local tbl = table.Copy( info )
+    local diffChar = "|"
+
+    if isGood == true then
+        diffChar = "+"
+    elseif isGood == false then
+        diffChar = "-"
+    end
+
+    tbl.source = "sv_daily_restart"
+    tbl.webhookDescription = "```diff\n" .. diffChar .. " Daily Restart " .. diffChar .. "```"
+
+    if not webhooker then
+        PrintTable( tbl )
+        return
+    end
+
+    ProtectedCall( function()
+        webhooker:send( "testing-endpoint", tbl )
+    end )
+end
+
+local function logWebhookRestart( str )
+    logWebhookGeneric( {
         text = str,
         AlertDeltas = AlertDeltas,
         alertIntervalsInSeconds = alertIntervalsInSeconds,
@@ -174,14 +200,7 @@ local function logWebhook( str )
         isOsTimeLarger = os.time() < EARLIEST_RESTART_TIME,
         playersInServer = #player.GetHumans(),
         allRestartAlertsGiven = table.Count( alertIntervalsInSeconds ) == 0
-    }
-
-    if not webhooker then
-        PrintTable( tbl )
-        return
-    end
-
-    webhooker:send( "testing-endpoint", tbl )
+    } )
 end
 
 local function mixpanelTrackEvent( eventName, data, reliable )
@@ -215,8 +234,6 @@ local SECONDS_IN_MINUTE = 60
 local function secondsToMinutes( minutes )
       return math.floor( minutes / SECONDS_IN_MINUTE )
 end
-
-local currentTime = os.time
 
 -- END HELPERS --
 
@@ -261,12 +278,6 @@ local function splitPlayersBySoftRestartStopAccess()
     end
 
     return noAccess, hasAccess
-end
-
-local function sendRestartTimeToClients( timeOfRestart )
-    net.Start( "AlertUsersOfRestart" )
-        net.WriteFloat( timeOfRestart )
-    net.Broadcast()
 end
 
 local function newAlertNotification( notifID, msg, duration )
@@ -315,18 +326,43 @@ local function tryAlertNotification( secondsUntilNextRestart, msg, msgAdmin, noA
     end
 end
 
-local function restartServer()
-    logWebhook( "Server hard restarting" )
-    if not TESTING_BOOLEAN then
-        sendAlertToClients( "Restarting server!" )
+local function _restartServer()
+    ProtectedCall( function()
         Restarter:restart()
-    else
+    end )
+end
+
+local function restartServer()
+    logWebhookRestart( "Server hard restarting" )
+
+    if TESTING_BOOLEAN then
         sendAlertToClients( "Restarting server ( not really, this is a test )!" )
+        return
     end
+
+    timer.Create( "CFC_DailyRestart_RetryRestart", RESTART_RETRY_INTERVAL, 0, function()
+        if restartAttemptsLeft > 0 then -- Retry.
+            restartAttemptsLeft = restartAttemptsLeft - 1
+            _restartServer()
+
+            return
+        end
+
+        tryingToHardRestart = false -- Unbreak rtv.
+
+        logWebhookGeneric( {
+            text = "Hard restart failed!",
+        }, false )
+
+        timer.Remove( "CFC_DailyRestart_RetryRestart" )
+    end )
+
+    sendAlertToClients( "Restarting server!" )
+    _restartServer()
 end
 
 local function softRestartServer()
-    logWebhook( "Server soft restarting" )
+    logWebhookRestart( "Server soft restarting" )
     if not TESTING_BOOLEAN then
         sendAlertToClients( "Soft-restarting server!" )
 
@@ -463,6 +499,16 @@ local function getHoursUntilRestartHour()
         hoursLeft = ( 24 - currentHour ) + restartHour
     end
 
+    -- Approximate to the hour. Same as nextRestartTime - lastRestartTime, where
+    --  nextRestartTime = os.time() + hoursLeft * SECONDS_IN_HOUR
+    --  lastRestartTime = os.time() - SysTime()
+    local gapBetweenLastAndNextRestarts = SysTime() + hoursLeft * SECONDS_IN_HOUR
+
+    -- If the previous restart happened too close to when the next one is scheduled, treat it as though today's restart already happened.
+    if gapBetweenLastAndNextRestarts < ACCEPTABLE_HOURS_BETWEEN_RESTARTS * SECONDS_IN_HOUR then
+        hoursLeft = hoursLeft + 24
+    end
+
     return hoursLeft
 end
 
@@ -475,19 +521,13 @@ local function waitUntilRestartHour()
     local timeTbl = os.date( "!*t" )
     local currentMinute = timeTbl.min
     local currentSecond =  timeTbl.sec
-
     local hoursLeft = getHoursUntilRestartHour()
 
-    local secondsOffset = 60 - currentSecond
-    local minutesOffset = 60 - currentMinute - 1
+    -- How far we are into the current hour
+    local secondsSpentInCurrentHour = currentMinute * 60 + currentSecond
 
-    -- We are this many seconds into the hour
-    local secondsAndMinutes = secondsOffset + ( minutesOffset * 60 )
-
-    local secondsToWait = ( hoursLeft * SECONDS_IN_HOUR ) - secondsAndMinutes
-
-    local timeToRestart = currentTime() + secondsToWait
-    sendRestartTimeToClients( timeToRestart )
+    -- hoursLeft rounds up, so we need to take out the amount of time spent in the current hour
+    local secondsToWait = ( hoursLeft * SECONDS_IN_HOUR ) - secondsSpentInCurrentHour
 
     createRestartTimer( secondsToWait )
 end
